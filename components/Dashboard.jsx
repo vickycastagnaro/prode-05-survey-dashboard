@@ -326,7 +326,7 @@ export default function Dashboard({ initialRows, initialError }) {
 
   return (
     <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 16px 64px" }}>
-      <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <LangToggle lang={lang} onChange={setLang} />
       </div>
 
@@ -337,7 +337,7 @@ export default function Dashboard({ initialRows, initialError }) {
           alignItems: "flex-start",
           flexWrap: "wrap",
           gap: 16,
-          marginBottom: 24,
+          marginBottom: 32,
         }}
       >
         <div>
@@ -356,9 +356,9 @@ export default function Dashboard({ initialRows, initialError }) {
                 background: "#fff",
                 color: "var(--text-default)",
                 border: "1px solid var(--neutral-300)",
-                borderRadius: "var(--radius-m)",
-                padding: "6px 14px",
-                fontSize: 13,
+                borderRadius: "var(--radius-s)",
+                padding: "8px 16px",
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: loading ? "default" : "pointer",
                 opacity: loading ? 0.7 : 1,
@@ -373,13 +373,13 @@ export default function Dashboard({ initialRows, initialError }) {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 8,
                 background: "var(--brand-500)",
                 color: "#fff",
                 border: "1px solid var(--brand-500)",
-                borderRadius: "var(--radius-m)",
-                padding: "6px 14px",
-                fontSize: 13,
+                borderRadius: "var(--radius-s)",
+                padding: "8px 16px",
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: generatingPdf ? "default" : "pointer",
                 opacity: generatingPdf ? 0.7 : 1,
@@ -405,7 +405,7 @@ export default function Dashboard({ initialRows, initialError }) {
             background: "#fde3e3",
             color: "var(--red-700)",
             padding: 12,
-            borderRadius: "var(--radius-m)",
+            borderRadius: "var(--radius-s)",
             marginBottom: 24,
             fontSize: 14,
           }}
@@ -419,12 +419,12 @@ export default function Dashboard({ initialRows, initialError }) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          marginBottom: 20,
+          gap: 12,
+          marginBottom: 12,
           flexWrap: "wrap",
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-lighter)" }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-lighter)" }}>
           {t.filterByInstance}
         </span>
         <InstanceDropdown
@@ -441,7 +441,7 @@ export default function Dashboard({ initialRows, initialError }) {
               background: "none",
               border: "none",
               color: "var(--brand-600)",
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",
               padding: 0,
@@ -453,17 +453,18 @@ export default function Dashboard({ initialRows, initialError }) {
       </div>
 
       {filtersAppliedText && (
-        <p className="print-only" style={{ fontSize: 12, color: "var(--text-lighter)", marginTop: -12, marginBottom: 20 }}>
+        <p className="print-only" style={{ fontSize: 12, color: "var(--text-lighter)", margin: 0 }}>
           {filtersAppliedText}
         </p>
       )}
+      <div style={{ marginBottom: 32 }} />
 
       <section
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
           gap: 16,
-          marginBottom: 24,
+          marginBottom: 32,
         }}
       >
         <KpiCard
@@ -486,14 +487,14 @@ export default function Dashboard({ initialRows, initialError }) {
       <section
         style={{
           background: "#fff",
-          borderRadius: "var(--radius-m)",
+          borderRadius: "var(--radius-l)",
           boxShadow: "var(--shadow-4dp)",
-          padding: 20,
-          marginBottom: 24,
+          padding: 24,
+          marginBottom: 32,
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-          <h2 style={{ fontSize: 15 }}>{t.q1Title}</h2>
+          <h2 style={{ fontSize: 16 }}>{t.q1Title}</h2>
           <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>n={total}</span>
         </div>
         <ResponsiveContainer width="100%" height={220}>
@@ -514,14 +515,14 @@ export default function Dashboard({ initialRows, initialError }) {
       <section
         style={{
           background: "#fff",
-          borderRadius: "var(--radius-m)",
+          borderRadius: "var(--radius-l)",
           boxShadow: "var(--shadow-4dp)",
-          padding: 20,
-          marginBottom: 24,
+          padding: 24,
+          marginBottom: 32,
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-          <h2 style={{ fontSize: 15 }}>{t.themesTitle}</h2>
+          <h2 style={{ fontSize: 16 }}>{t.themesTitle}</h2>
           <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>{t.themesSubtitle}</span>
         </div>
         <ThemeSummary groups={themeGroups} t={t} />
@@ -531,12 +532,12 @@ export default function Dashboard({ initialRows, initialError }) {
         className="no-print"
         style={{
           background: "#fff",
-          borderRadius: "var(--radius-m)",
+          borderRadius: "var(--radius-l)",
           boxShadow: "var(--shadow-4dp)",
-          padding: 20,
+          padding: 24,
         }}
       >
-        <h2 style={{ fontSize: 15, marginBottom: 16 }}>{t.individualResponses}</h2>
+        <h2 style={{ fontSize: 16, marginBottom: 16 }}>{t.individualResponses}</h2>
 
         <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           <FilterPill
@@ -564,7 +565,7 @@ export default function Dashboard({ initialRows, initialError }) {
               padding: "8px 12px",
               borderRadius: "var(--radius-s)",
               border: "1px solid var(--neutral-300)",
-              fontSize: 13,
+              fontSize: 14,
             }}
           />
           <span style={{ fontSize: 12, color: "var(--text-lighter)", alignSelf: "center" }}>
@@ -633,13 +634,13 @@ export default function Dashboard({ initialRows, initialError }) {
           <div
             style={{
               border: "1px solid var(--neutral-200)",
-              borderRadius: "var(--radius-m)",
-              padding: 20,
+              borderRadius: "var(--radius-l)",
+              padding: 24,
               marginBottom: 24,
             }}
           >
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-              <h2 style={{ fontSize: 15 }}>{t.q1Title}</h2>
+              <h2 style={{ fontSize: 16 }}>{t.q1Title}</h2>
               <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>n={total}</span>
             </div>
             <ResponsiveContainer width="100%" height={220}>
@@ -659,11 +660,11 @@ export default function Dashboard({ initialRows, initialError }) {
           <div
             style={{
               border: "1px solid var(--neutral-200)",
-              borderRadius: "var(--radius-m)",
-              padding: 20,
+              borderRadius: "var(--radius-l)",
+              padding: 24,
             }}
           >
-            <h2 style={{ fontSize: 15, marginBottom: 12 }}>{t.themesTitle}</h2>
+            <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t.themesTitle}</h2>
             <ThemeSummary groups={themeGroups} t={t} />
           </div>
         </div>
@@ -688,7 +689,7 @@ function LangToggle({ lang, onChange }) {
           onClick={() => onChange(code)}
           aria-pressed={lang === code}
           style={{
-            padding: "6px 14px",
+            padding: "8px 16px",
             fontSize: 12,
             fontWeight: 600,
             border: "none",
@@ -715,12 +716,12 @@ function ThemeSummary({ groups, t }) {
           key={g.key}
           style={{
             border: "1px solid var(--neutral-200)",
-            borderRadius: "var(--radius-m)",
-            padding: 14,
+            borderRadius: "var(--radius-l)",
+            padding: 16,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{t.themes[g.key]}</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{t.themes[g.key]}</span>
             <Pill text={`${g.count}`} color="var(--brand-600)" bg="var(--blueprimary-100)" />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -730,7 +731,7 @@ function ThemeSummary({ groups, t }) {
               </p>
             ))}
             {g.items.length > 3 && (
-              <p style={{ margin: 0, fontSize: 11, color: "var(--text-lighter)" }}>
+              <p style={{ margin: 0, fontSize: 10, color: "var(--text-lighter)" }}>
                 {t.moreCount(g.items.length - 3)}
               </p>
             )}
@@ -749,7 +750,7 @@ function ResponseCard({ row, t }) {
       style={{
         border: "1px solid var(--neutral-200)",
         borderLeft: `4px solid ${borderColor}`,
-        borderRadius: "var(--radius-m)",
+        borderRadius: "var(--radius-l)",
         padding: 16,
       }}
     >
@@ -760,11 +761,11 @@ function ResponseCard({ row, t }) {
           alignItems: "flex-start",
           flexWrap: "wrap",
           gap: 8,
-          marginBottom: 10,
+          marginBottom: 12,
         }}
       >
         <div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
             {t.ratingWord} {row.q1_rating ?? "-"} ·{" "}
             {row.instanceName ? `${row.instanceName} (${row.instanceId})` : `${t.instanceFallback} ${row.instanceId}`}
           </p>
@@ -795,7 +796,7 @@ function KpiCard({ label, value, sublabel, accent, highlight, info, infoLabel })
         position: "relative",
         background: highlight ? "#e6fbe9" : "#fff",
         border: highlight ? "1px solid #abedb6" : "1px solid var(--neutral-200)",
-        borderRadius: "var(--radius-m)",
+        borderRadius: "var(--radius-l)",
         padding: 16,
         boxShadow: "var(--shadow-4dp)",
       }}
@@ -804,18 +805,19 @@ function KpiCard({ label, value, sublabel, accent, highlight, info, infoLabel })
       <p
         style={{
           margin: 0,
-          fontSize: 28,
+          fontSize: 32,
+          lineHeight: 1.3,
           fontWeight: 600,
           color: accent || (highlight ? "var(--green-700)" : "var(--text-default)"),
         }}
       >
         {value}
       </p>
-      <p style={{ margin: "2px 0 0", fontSize: 11, fontWeight: 600, color: "var(--text-lighter)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+      <p style={{ margin: "4px 0 0", fontSize: 10, fontWeight: 600, color: "var(--text-lighter)", textTransform: "uppercase" }}>
         {label}
       </p>
       {sublabel && (
-        <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-lighter)" }}>{sublabel}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 10, color: "var(--text-lighter)" }}>{sublabel}</p>
       )}
     </div>
   );
@@ -824,7 +826,7 @@ function KpiCard({ label, value, sublabel, accent, highlight, info, infoLabel })
 function InfoTooltip({ text, label }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="no-print" style={{ position: "absolute", top: 10, right: 10 }}>
+    <div className="no-print" style={{ position: "absolute", top: 12, right: 12 }}>
       <button
         onClick={() => setOpen((o) => !o)}
         onBlur={() => setOpen(false)}
@@ -836,7 +838,7 @@ function InfoTooltip({ text, label }) {
           border: "1px solid var(--neutral-300)",
           background: "#fff",
           color: "var(--text-lighter)",
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: 600,
           lineHeight: "16px",
           padding: 0,
@@ -849,17 +851,16 @@ function InfoTooltip({ text, label }) {
         <div
           style={{
             position: "absolute",
-            top: 22,
+            top: 24,
             right: 0,
             width: 220,
             background: "var(--neutral-950)",
             color: "#fff",
             borderRadius: "var(--radius-s)",
-            padding: 10,
-            fontSize: 11,
+            padding: 12,
+            fontSize: 10,
             fontWeight: 400,
             textTransform: "none",
-            letterSpacing: 0,
             lineHeight: 1.4,
             zIndex: 30,
             boxShadow: "var(--shadow-8dp)",
@@ -916,9 +917,9 @@ function InstanceDropdown({ instances, value, label, onChange, t }) {
           gap: 8,
           background: "#fff",
           border: "1px solid var(--neutral-300)",
-          borderRadius: "var(--radius-m)",
-          padding: "8px 14px",
-          fontSize: 13,
+          borderRadius: "var(--radius-s)",
+          padding: "8px 16px",
+          fontSize: 14,
           fontWeight: 600,
           color: "var(--text-default)",
           cursor: "pointer",
@@ -927,7 +928,7 @@ function InstanceDropdown({ instances, value, label, onChange, t }) {
         }}
       >
         <span>{label}</span>
-        <span style={{ color: "var(--text-lighter)", fontSize: 11 }}>{open ? "▲" : "▼"}</span>
+        <span style={{ color: "var(--text-lighter)", fontSize: 10 }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
@@ -944,7 +945,7 @@ function InstanceDropdown({ instances, value, label, onChange, t }) {
               zIndex: 20,
               background: "#fff",
               border: "1px solid var(--neutral-200)",
-              borderRadius: "var(--radius-m)",
+              borderRadius: "var(--radius-l)",
               boxShadow: "var(--shadow-8dp)",
               minWidth: 280,
               maxHeight: 320,
@@ -953,7 +954,7 @@ function InstanceDropdown({ instances, value, label, onChange, t }) {
               flexDirection: "column",
             }}
           >
-            <div style={{ padding: 10, borderBottom: "1px solid var(--neutral-200)" }}>
+            <div style={{ padding: 12, borderBottom: "1px solid var(--neutral-200)" }}>
               <input
                 autoFocus
                 value={query}
@@ -961,10 +962,10 @@ function InstanceDropdown({ instances, value, label, onChange, t }) {
                 placeholder={t.searchInstance}
                 style={{
                   width: "100%",
-                  padding: "6px 10px",
+                  padding: "8px 12px",
                   borderRadius: "var(--radius-s)",
                   border: "1px solid var(--neutral-300)",
-                  fontSize: 13,
+                  fontSize: 14,
                   boxSizing: "border-box",
                 }}
               />
@@ -972,7 +973,7 @@ function InstanceDropdown({ instances, value, label, onChange, t }) {
             <div style={{ overflowY: "auto" }}>
               <DropdownOption text={t.allInstances} selected={value === "all"} onClick={() => select("all")} />
               {filtered.length === 0 && (
-                <p style={{ padding: "10px 14px", fontSize: 13, color: "var(--text-lighter)" }}>
+                <p style={{ padding: "12px 16px", fontSize: 14, color: "var(--text-lighter)" }}>
                   {t.noResults}
                 </p>
               )}
@@ -1000,8 +1001,8 @@ function DropdownOption({ text, selected, onClick }) {
         display: "block",
         width: "100%",
         textAlign: "left",
-        padding: "9px 14px",
-        fontSize: 13,
+        padding: "8px 16px",
+        fontSize: 14,
         fontWeight: selected ? 600 : 400,
         color: selected ? "var(--brand-600)" : "var(--text-default)",
         background: selected ? "var(--blueprimary-100)" : "transparent",
@@ -1023,8 +1024,8 @@ function FilterPill({ label, active, onClick }) {
         color: active ? "#fff" : "var(--text-default)",
         border: `1px solid ${active ? "var(--brand-500)" : "var(--neutral-300)"}`,
         borderRadius: 999,
-        padding: "6px 14px",
-        fontSize: 13,
+        padding: "8px 16px",
+        fontSize: 14,
         fontWeight: 600,
         cursor: "pointer",
       }}

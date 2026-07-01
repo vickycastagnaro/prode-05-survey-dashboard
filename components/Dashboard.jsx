@@ -31,6 +31,7 @@ const DICT = {
     title: "PRODE 05: Encuesta Satisfacción",
     pdfTitle: "Encuesta de Satisfacción",
     instanceShownLabel: "Instancia:",
+    filterByIntent: "Intención:",
     userFallback: "Usuario",
     subtitle: "Fuente: Redash (query 49867) · Actualiza automáticamente cada 60s",
     refresh: "Actualizar datos",
@@ -85,6 +86,7 @@ const DICT = {
     title: "PRODE 05: Satisfaction Survey",
     pdfTitle: "Satisfaction Survey",
     instanceShownLabel: "Instance:",
+    filterByIntent: "Intent:",
     userFallback: "User",
     subtitle: "Source: Redash (query 49867) · Auto-refreshes every 60s",
     refresh: "Refresh data",
@@ -209,15 +211,30 @@ export default function Dashboard({ initialRows, initialError }) {
     return rows.filter((r) => String(r.instanceId) === String(instanceFilter));
   }, [rows, instanceFilter]);
 
-  const total = instanceFilteredRows.length;
+  // Conteo por intención dentro del alcance de instancia (sin aplicar el propio
+  // filtro de intención) — se usa solo para los números en los pills de filtro,
+  // así siempre muestran cuántas respuestas hay disponibles para cada opción.
+  const pillIntentCounts = { yes: 0, maybe: 0, no: 0 };
+  instanceFilteredRows.forEach((r) => {
+    if (r.q2_continuity_intent && pillIntentCounts[r.q2_continuity_intent] != null) {
+      pillIntentCounts[r.q2_continuity_intent] += 1;
+    }
+  });
+
+  // Filtro global: instancia + intención (Sí/Tal vez/No). Afecta KPIs, gráfico,
+  // temas y la lista de respuestas individuales — no solo la última sección.
+  const scopedRows = useMemo(() => {
+    if (intentFilter === "all") return instanceFilteredRows;
+    return instanceFilteredRows.filter((r) => r.q2_continuity_intent === intentFilter);
+  }, [instanceFilteredRows, intentFilter]);
+
+  const total = scopedRows.length;
   const avgRating = total
-    ? (
-        instanceFilteredRows.reduce((sum, r) => sum + (r.q1_rating || 0), 0) / total
-      ).toFixed(2)
+    ? (scopedRows.reduce((sum, r) => sum + (r.q1_rating || 0), 0) / total).toFixed(2)
     : "-";
 
   const intentCounts = { yes: 0, maybe: 0, no: 0 };
-  instanceFilteredRows.forEach((r) => {
+  scopedRows.forEach((r) => {
     if (r.q2_continuity_intent && intentCounts[r.q2_continuity_intent] != null) {
       intentCounts[r.q2_continuity_intent] += 1;
     }
@@ -228,26 +245,23 @@ export default function Dashboard({ initialRows, initialError }) {
   const ratingData = [1, 2, 3, 4, 5].map((n) => ({
     rating: `${n}`,
     label: `${t.ratingWord} ${n}`,
-    cantidad: instanceFilteredRows.filter((r) => r.q1_rating === n).length,
+    cantidad: scopedRows.filter((r) => r.q1_rating === n).length,
     color: ratingColor(n),
   }));
   const maxRatingCount = Math.max(1, ...ratingData.map((d) => d.cantidad));
 
   const listRows = useMemo(() => {
-    let list = instanceFilteredRows;
-    if (intentFilter !== "all") {
-      list = list.filter((r) => r.q2_continuity_intent === intentFilter);
-    }
+    let list = scopedRows;
     if (search.trim() !== "") {
       const q = search.trim().toLowerCase();
       list = list.filter((r) => (r.q3_comment || "").toLowerCase().includes(q));
     }
     return [...list].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-  }, [instanceFilteredRows, intentFilter, search]);
+  }, [scopedRows, search]);
 
   const themeGroups = useMemo(() => {
     const map = new Map();
-    instanceFilteredRows.forEach((r) => {
+    scopedRows.forEach((r) => {
       const key = classifyTheme(r.q3_comment);
       if (!key) return;
       if (!map.has(key)) map.set(key, []);
@@ -256,7 +270,7 @@ export default function Dashboard({ initialRows, initialError }) {
     return Array.from(map.entries())
       .map(([key, items]) => ({ key, count: items.length, items }))
       .sort((a, b) => b.count - a.count);
-  }, [instanceFilteredRows]);
+  }, [scopedRows]);
 
   const selectedInstanceLabel =
     instanceFilter === "all"
@@ -466,6 +480,28 @@ export default function Dashboard({ initialRows, initialError }) {
         )}
       </div>
 
+      <div
+        className="no-print"
+        style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-lighter)" }}>
+          {t.filterByIntent}
+        </span>
+        <FilterPill
+          label={`${t.filterAllLabel} (${instanceFilteredRows.length})`}
+          active={intentFilter === "all"}
+          onClick={() => setIntentFilter("all")}
+        />
+        {INTENT_ORDER.map((k) => (
+          <FilterPill
+            key={k}
+            label={`${t.intents[k]} (${pillIntentCounts[k]})`}
+            active={intentFilter === k}
+            onClick={() => setIntentFilter(k)}
+          />
+        ))}
+      </div>
+
       {filtersAppliedText && (
         <p className="print-only" style={{ fontSize: 12, color: "var(--text-lighter)", margin: 0 }}>
           {filtersAppliedText}
@@ -552,22 +588,6 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <h2 style={{ fontSize: 16, marginBottom: 16 }}>{t.individualResponses}</h2>
-
-        <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          <FilterPill
-            label={`${t.filterAllLabel} (${total})`}
-            active={intentFilter === "all"}
-            onClick={() => setIntentFilter("all")}
-          />
-          {INTENT_ORDER.map((k) => (
-            <FilterPill
-              key={k}
-              label={`${t.intents[k]} (${intentCounts[k]})`}
-              active={intentFilter === k}
-              onClick={() => setIntentFilter(k)}
-            />
-          ))}
-        </div>
 
         <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           <input

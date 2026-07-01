@@ -151,12 +151,6 @@ export default function Dashboard({ initialRows, initialError }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <Pill
-              text={metGoal ? "✓ Continuidad alcanzada" : "Continuidad por debajo del umbral"}
-              color={metGoal ? "var(--green-700)" : "var(--yellow-800)"}
-              bg={metGoal ? "#e6fbe9" : "#fcf7ce"}
-              border={metGoal ? "#abedb6" : "#fbeb9d"}
-            />
             <button
               className="no-print"
               onClick={handleRefresh}
@@ -179,6 +173,9 @@ export default function Dashboard({ initialRows, initialError }) {
               className="no-print"
               onClick={() => window.print()}
               style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
                 background: "var(--brand-500)",
                 color: "#fff",
                 border: "1px solid var(--brand-500)",
@@ -189,7 +186,12 @@ export default function Dashboard({ initialRows, initialError }) {
                 cursor: "pointer",
               }}
             >
-              ⭳ Descargar PDF
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 3v12" />
+                <path d="M7 10l5 5 5-5" />
+                <path d="M5 21h14" />
+              </svg>
+              Descargar PDF
             </button>
           </div>
           <p style={{ fontSize: 12, color: "var(--text-lighter)", margin: "8px 0 0" }}>
@@ -271,6 +273,7 @@ export default function Dashboard({ initialRows, initialError }) {
           value={`${pctYes}%`}
           sublabel={`Umbral: ${CONTINUITY_THRESHOLD}%`}
           highlight={metGoal}
+          info={`Se considera "continuidad alcanzada" cuando el % de respuestas "Sí" en Q2 es mayor o igual al umbral de ${CONTINUITY_THRESHOLD}%. Por debajo de ese umbral, se marca en amarillo como punto de atención.`}
         />
         <KpiCard label="Respuestas" value={total} />
         <KpiCard label="Rating promedio (1-5)" value={avgRating} />
@@ -419,10 +422,11 @@ function ResponseCard({ row }) {
   );
 }
 
-function KpiCard({ label, value, sublabel, accent, highlight }) {
+function KpiCard({ label, value, sublabel, accent, highlight, info }) {
   return (
     <div
       style={{
+        position: "relative",
         background: highlight ? "#e6fbe9" : "#fff",
         border: highlight ? "1px solid #abedb6" : "1px solid var(--neutral-200)",
         borderRadius: "var(--radius-m)",
@@ -430,6 +434,7 @@ function KpiCard({ label, value, sublabel, accent, highlight }) {
         boxShadow: "var(--shadow-4dp)",
       }}
     >
+      {info && <InfoTooltip text={info} />}
       <p
         style={{
           margin: 0,
@@ -445,6 +450,57 @@ function KpiCard({ label, value, sublabel, accent, highlight }) {
       </p>
       {sublabel && (
         <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-lighter)" }}>{sublabel}</p>
+      )}
+    </div>
+  );
+}
+
+function InfoTooltip({ text }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="no-print" style={{ position: "absolute", top: 10, right: 10 }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setOpen(false)}
+        aria-label="Ver criterio"
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          border: "1px solid var(--neutral-300)",
+          background: "#fff",
+          color: "var(--text-lighter)",
+          fontSize: 11,
+          fontWeight: 600,
+          lineHeight: "16px",
+          padding: 0,
+          cursor: "pointer",
+        }}
+      >
+        i
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: 22,
+            right: 0,
+            width: 220,
+            background: "var(--neutral-950)",
+            color: "#fff",
+            borderRadius: "var(--radius-s)",
+            padding: 10,
+            fontSize: 11,
+            fontWeight: 400,
+            textTransform: "none",
+            letterSpacing: 0,
+            lineHeight: 1.4,
+            zIndex: 30,
+            boxShadow: "var(--shadow-8dp)",
+          }}
+        >
+          {text}
+        </div>
       )}
     </div>
   );

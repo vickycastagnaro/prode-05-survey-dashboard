@@ -28,6 +28,8 @@ const CONTINUITY_THRESHOLD = 70;
 
 const DICT = {
   es: {
+    title: "PRODE 05: Encuesta Satisfacción",
+    pdfTitle: "Encuesta de Satisfacción",
     subtitle: "Fuente: Redash (query 49780) · Actualiza automáticamente cada 60s",
     refresh: "Actualizar datos",
     refreshing: "Actualizando...",
@@ -78,6 +80,8 @@ const DICT = {
     dateLocale: "es-AR",
   },
   en: {
+    title: "PRODE 05: Satisfaction Survey",
+    pdfTitle: "Satisfaction Survey",
     subtitle: "Source: Redash (query 49780) · Auto-refreshes every 60s",
     refresh: "Refresh data",
     refreshing: "Refreshing...",
@@ -341,7 +345,7 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 24 }}>PRODE 05: Encuesta Satisfacción</h1>
+          <h1 style={{ fontSize: 24 }}>{t.title}</h1>
           <p style={{ color: "var(--text-lighter)", fontSize: 14, margin: "4px 0 0" }}>
             {t.subtitle}
           </p>
@@ -591,14 +595,14 @@ export default function Dashboard({ initialRows, initialError }) {
           position: "absolute",
           top: 0,
           left: -99999,
-          width: 900,
+          width: 960,
           background: "#fff",
-          padding: 32,
+          padding: 56,
         }}
       >
         <div ref={reportRef}>
-          <h1 style={{ fontSize: 22 }}>Encuesta de Satisfacción</h1>
-          <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "4px 0 20px" }}>
+          <h1 style={{ fontSize: 22 }}>{t.pdfTitle}</h1>
+          <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "4px 0 24px" }}>
             {t.subtitle} · {t.generatedAt}: {lastUpdated.toLocaleString(t.dateLocale)}
           </p>
 

@@ -30,6 +30,8 @@ const DICT = {
   es: {
     title: "PRODE 05: Encuesta Satisfacción",
     pdfTitle: "Encuesta de Satisfacción",
+    instanceShownLabel: "Instancia:",
+    userFallback: "Usuario",
     subtitle: "Fuente: Redash (query 49780) · Actualiza automáticamente cada 60s",
     refresh: "Actualizar datos",
     refreshing: "Actualizando...",
@@ -82,6 +84,8 @@ const DICT = {
   en: {
     title: "PRODE 05: Satisfaction Survey",
     pdfTitle: "Satisfaction Survey",
+    instanceShownLabel: "Instance:",
+    userFallback: "User",
     subtitle: "Source: Redash (query 49780) · Auto-refreshes every 60s",
     refresh: "Refresh data",
     refreshing: "Refreshing...",
@@ -346,7 +350,13 @@ export default function Dashboard({ initialRows, initialError }) {
       >
         <div>
           <h1 style={{ fontSize: 24 }}>{t.title}</h1>
-          <p style={{ color: "var(--text-lighter)", fontSize: 14, margin: "4px 0 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 0" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-lighter)" }}>
+              {t.instanceShownLabel}
+            </span>
+            <Pill text={selectedInstanceLabel} color="var(--brand-600)" bg="var(--blueprimary-100)" />
+          </div>
+          <p style={{ color: "var(--text-lighter)", fontSize: 14, margin: "8px 0 0" }}>
             {t.subtitle}
           </p>
         </div>
@@ -602,7 +612,13 @@ export default function Dashboard({ initialRows, initialError }) {
       >
         <div ref={reportRef}>
           <h1 style={{ fontSize: 22 }}>{t.pdfTitle}</h1>
-          <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "4px 0 24px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 0" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-lighter)" }}>
+              {t.instanceShownLabel}
+            </span>
+            <Pill text={selectedInstanceLabel} color="var(--brand-600)" bg="var(--blueprimary-100)" />
+          </div>
+          <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "8px 0 24px" }}>
             {t.subtitle} · {t.generatedAt}: {lastUpdated.toLocaleString(t.dateLocale)}
           </p>
 
@@ -770,10 +786,12 @@ function ResponseCard({ row, t }) {
       >
         <div>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
-            {t.ratingWord} {row.q1_rating ?? "-"} ·{" "}
-            {row.instanceName ? `${row.instanceName} (${row.instanceId})` : `${t.instanceFallback} ${row.instanceId}`}
+            {row.userName || `${t.userFallback} ${row.userId}`}
           </p>
           <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--text-lighter)" }}>
+            {t.ratingWord} {row.q1_rating ?? "-"} ·{" "}
+            {row.instanceName ? `${row.instanceName} (${row.instanceId})` : `${t.instanceFallback} ${row.instanceId}`}
+            {" · "}
             {formatDate(row.completedAt, t.dateLocale)}
           </p>
         </div>

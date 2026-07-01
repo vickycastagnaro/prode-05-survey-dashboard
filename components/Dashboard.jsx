@@ -45,7 +45,6 @@ export default function Dashboard({ initialRows, initialError }) {
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [instanceFilter, setInstanceFilter] = useState("all");
-  const [instanceQuery, setInstanceQuery] = useState("");
   const [intentFilter, setIntentFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -107,22 +106,11 @@ export default function Dashboard({ initialRows, initialError }) {
     return [...list].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
   }, [instanceFilteredRows, intentFilter, search]);
 
-  function handleInstanceInput(value) {
-    setInstanceQuery(value);
-    if (value.trim() === "") {
-      setInstanceFilter("all");
-      return;
-    }
-    const match = instances.find((i) => i.label === value);
-    if (match) {
-      setInstanceFilter(match.id);
-    }
-  }
-
-  function clearInstanceFilter() {
-    setInstanceQuery("");
-    setInstanceFilter("all");
-  }
+  const selectedInstanceLabel =
+    instanceFilter === "all"
+      ? "Todas las instancias"
+      : instances.find((i) => String(i.id) === String(instanceFilter))?.label ||
+        "Todas las instancias";
 
   async function handleRefresh() {
     setLoading(true);
@@ -207,6 +195,42 @@ export default function Dashboard({ initialRows, initialError }) {
           {error}
         </div>
       )}
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 20,
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-lighter)" }}>
+          Filtrar por instancia:
+        </span>
+        <InstanceDropdown
+          instances={instances}
+          value={instanceFilter}
+          label={selectedInstanceLabel}
+          onChange={setInstanceFilter}
+        />
+        {instanceFilter !== "all" && (
+          <button
+            onClick={() => setInstanceFilter("all")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--brand-600)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            Limpiar filtro
+          </button>
+        )}
+      </div>
 
       <section
         style={{
@@ -302,47 +326,6 @@ export default function Dashboard({ initialRows, initialError }) {
               fontSize: 13,
             }}
           />
-          <div style={{ position: "relative", flex: "1 1 220px" }}>
-            <input
-              value={instanceQuery}
-              onChange={(e) => handleInstanceInput(e.target.value)}
-              list="instance-options"
-              placeholder="Buscar instancia por nombre o id..."
-              style={{
-                width: "100%",
-                padding: "8px 32px 8px 12px",
-                borderRadius: "var(--radius-s)",
-                border: "1px solid var(--neutral-300)",
-                fontSize: 13,
-                boxSizing: "border-box",
-              }}
-            />
-            <datalist id="instance-options">
-              {instances.map((i) => (
-                <option key={i.id} value={i.label} />
-              ))}
-            </datalist>
-            {instanceFilter !== "all" && (
-              <button
-                onClick={clearInstanceFilter}
-                aria-label="Limpiar filtro de instancia"
-                style={{
-                  position: "absolute",
-                  right: 8,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-lighter)",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  lineHeight: 1,
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
           <span style={{ fontSize: 12, color: "var(--text-lighter)", alignSelf: "center" }}>
             {listRows.length} mostrados
           </span>
@@ -458,6 +441,132 @@ function Pill({ text, color, bg, border }) {
     >
       {text}
     </span>
+  );
+}
+
+function InstanceDropdown({ instances, value, label, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filtered = instances.filter((i) =>
+    i.label.toLowerCase().includes(query.trim().toLowerCase())
+  );
+
+  function select(id) {
+    onChange(id);
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: "#fff",
+          border: "1px solid var(--neutral-300)",
+          borderRadius: "var(--radius-m)",
+          padding: "8px 14px",
+          fontSize: 13,
+          fontWeight: 600,
+          color: "var(--text-default)",
+          cursor: "pointer",
+          minWidth: 220,
+          justifyContent: "space-between",
+        }}
+      >
+        <span>{label}</span>
+        <span style={{ color: "var(--text-lighter)", fontSize: 11 }}>{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <>
+          <div
+            onClick={() => setOpen(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 10 }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: 0,
+              zIndex: 20,
+              background: "#fff",
+              border: "1px solid var(--neutral-200)",
+              borderRadius: "var(--radius-m)",
+              boxShadow: "var(--shadow-8dp)",
+              minWidth: 280,
+              maxHeight: 320,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div style={{ padding: 10, borderBottom: "1px solid var(--neutral-200)" }}>
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por nombre o id..."
+                style={{
+                  width: "100%",
+                  padding: "6px 10px",
+                  borderRadius: "var(--radius-s)",
+                  border: "1px solid var(--neutral-300)",
+                  fontSize: 13,
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ overflowY: "auto" }}>
+              <DropdownOption
+                text="Todas las instancias"
+                selected={value === "all"}
+                onClick={() => select("all")}
+              />
+              {filtered.length === 0 && (
+                <p style={{ padding: "10px 14px", fontSize: 13, color: "var(--text-lighter)" }}>
+                  Sin resultados.
+                </p>
+              )}
+              {filtered.map((i) => (
+                <DropdownOption
+                  key={i.id}
+                  text={i.label}
+                  selected={String(value) === String(i.id)}
+                  onClick={() => select(i.id)}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DropdownOption({ text, selected, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        padding: "9px 14px",
+        fontSize: 13,
+        fontWeight: selected ? 600 : 400,
+        color: selected ? "var(--brand-600)" : "var(--text-default)",
+        background: selected ? "var(--blueprimary-100)" : "transparent",
+        border: "none",
+        cursor: "pointer",
+      }}
+    >
+      {text}
+    </button>
   );
 }
 

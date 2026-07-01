@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "TRIAL_CONTINUITY_2026 — Resultados de la encuesta",
+  title: "PRODE 05: Prode Satisfaction Survey",
   description: "Dashboard interno de resultados de la encuesta TRIAL_CONTINUITY_2026",
 };
 

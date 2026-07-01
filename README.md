@@ -22,7 +22,7 @@ git push -u origin main
 3. Framework Preset: se detecta solo como **Next.js**. No cambies nada más.
 4. Antes de darle "Deploy", agregá las variables de entorno (Environment Variables):
    - `REDASH_BASE_URL` = `https://redash.humand.co`
-   - `REDASH_QUERY_ID` = `49747`
+   - `REDASH_QUERY_ID` = `49780`
    - `REDASH_API_KEY` = (el API key de la query — no lo subas nunca al repo)
 5. Deploy. En 1-2 minutos tenés la URL pública (algo como `prode-05-survey-dashboard.vercel.app`).
 

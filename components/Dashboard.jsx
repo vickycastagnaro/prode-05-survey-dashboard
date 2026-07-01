@@ -22,21 +22,147 @@ const INTENT_BG = {
   maybe: "#fcf7ce",
   no: "#fde3e3",
 };
-const INTENT_LABELS = { yes: "Sí", maybe: "Tal vez", no: "No" };
 const INTENT_ORDER = ["yes", "maybe", "no"];
 
 const CONTINUITY_THRESHOLD = 70;
 
-function formatDate(iso) {
+const DICT = {
+  es: {
+    subtitle: "Fuente: Redash (query 49780) · Actualiza automáticamente cada 60s",
+    refresh: "Actualizar datos",
+    refreshing: "Actualizando...",
+    downloadPdf: "Descargar PDF",
+    generatingPdf: "Generando PDF...",
+    updated: "Actualizado",
+    generatedAt: "Generado",
+    filterByInstance: "Filtrar por instancia:",
+    allInstances: "Todas las instancias",
+    clearFilter: "Limpiar filtro",
+    searchInstance: "Buscar por nombre o id...",
+    noResults: "Sin resultados.",
+    filtersApplied: "Filtros aplicados",
+    instanceLabel: "instancia",
+    intentLabel: "intención",
+    searchLabel: "búsqueda",
+    kpiContinuity: "% Continuidad = Sí",
+    kpiThreshold: (n) => `Umbral: ${n}%`,
+    kpiResponses: "Respuestas",
+    kpiAvgRating: "Rating promedio (1-5)",
+    kpiWontContinue: "No continuarían",
+    infoContinuity: (n) =>
+      `Se considera "continuidad alcanzada" cuando el % de respuestas "Sí" en Q2 es mayor o igual al umbral de ${n}%. Por debajo de ese umbral, se marca en amarillo como punto de atención.`,
+    infoIconLabel: "Ver criterio",
+    q1Title: "Q1 — ¿Qué tan satisfecho estás con la continuidad?",
+    themesTitle: "Temas mencionados en los comentarios (Q3)",
+    themesSubtitle: "agrupado automáticamente por palabras clave",
+    themesEmpty: "Todavía no hay suficientes comentarios para agrupar por tema.",
+    moreCount: (n) => `+${n} más`,
+    individualResponses: "Respuestas individuales",
+    filterAllLabel: "Todos",
+    searchComments: "Buscar en comentarios...",
+    shownCount: (n) => `${n} mostrados`,
+    noResponsesFilter: "No hay respuestas para este filtro.",
+    q3Label: "Q3 — Comentario",
+    ratingWord: "Rating",
+    instanceFallback: "Instancia",
+    intents: { yes: "Sí", maybe: "Tal vez", no: "No" },
+    themes: {
+      usability: "Facilidad de uso",
+      satisfaction: "Satisfacción general",
+      support: "Soporte y atención",
+      price: "Precio / costo",
+      features: "Funcionalidades",
+      performance: "Rendimiento / errores",
+      other: "Otros comentarios",
+    },
+    dateLocale: "es-AR",
+  },
+  en: {
+    subtitle: "Source: Redash (query 49780) · Auto-refreshes every 60s",
+    refresh: "Refresh data",
+    refreshing: "Refreshing...",
+    downloadPdf: "Download PDF",
+    generatingPdf: "Generating PDF...",
+    updated: "Updated",
+    generatedAt: "Generated",
+    filterByInstance: "Filter by instance:",
+    allInstances: "All instances",
+    clearFilter: "Clear filter",
+    searchInstance: "Search by name or id...",
+    noResults: "No results.",
+    filtersApplied: "Filters applied",
+    instanceLabel: "instance",
+    intentLabel: "intent",
+    searchLabel: "search",
+    kpiContinuity: "% Continuity = Yes",
+    kpiThreshold: (n) => `Threshold: ${n}%`,
+    kpiResponses: "Responses",
+    kpiAvgRating: "Average rating (1-5)",
+    kpiWontContinue: "Would not continue",
+    infoContinuity: (n) =>
+      `"Continuity reached" is shown when the % of "Yes" answers in Q2 is at or above the ${n}% threshold. Below that, it's flagged yellow as a point of attention.`,
+    infoIconLabel: "View criteria",
+    q1Title: "Q1 — How satisfied are you with continuity?",
+    themesTitle: "Topics mentioned in comments (Q3)",
+    themesSubtitle: "grouped automatically by keywords",
+    themesEmpty: "Not enough comments yet to group by topic.",
+    moreCount: (n) => `+${n} more`,
+    individualResponses: "Individual responses",
+    filterAllLabel: "All",
+    searchComments: "Search comments...",
+    shownCount: (n) => `${n} shown`,
+    noResponsesFilter: "No responses match this filter.",
+    q3Label: "Q3 — Comment",
+    ratingWord: "Rating",
+    instanceFallback: "Instance",
+    intents: { yes: "Yes", maybe: "Maybe", no: "No" },
+    themes: {
+      usability: "Ease of use",
+      satisfaction: "General satisfaction",
+      support: "Support",
+      price: "Price / cost",
+      features: "Features",
+      performance: "Performance / bugs",
+      other: "Other comments",
+    },
+    dateLocale: "en-US",
+  },
+};
+
+function formatDate(iso, locale) {
   if (!iso) return "-";
   const d = new Date(iso);
-  return d.toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" });
+  return d.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function ratingColor(n) {
   if (n <= 2) return "#e74444";
   if (n === 3) return "#f0b623";
   return "#4ed364";
+}
+
+const THEME_RULES = [
+  { key: "usability", keywords: ["facil", "fácil", "simple", "sencill", "intuitiv"] },
+  {
+    key: "satisfaction",
+    keywords: ["encanta", "encant", "gust", "excelente", "genial", "buena", "buenisim", "buenísim", "ador", "perfect"],
+  },
+  { key: "support", keywords: ["soporte", "atenci", "ayuda", "respuesta", "acompañ"] },
+  { key: "price", keywords: ["precio", "costo", "caro", "barato", "plan de pago", " pago"] },
+  {
+    key: "features",
+    keywords: ["función", "funcion", "feature", "módulo", "modulo", "reporte", "falta ", "necesito", "necesita"],
+  },
+  { key: "performance", keywords: ["lento", "bug", "error", "falla", "problema", "traba"] },
+];
+
+function classifyTheme(comment) {
+  if (!comment || comment.trim() === "") return null;
+  const text = comment.toLowerCase();
+  for (const rule of THEME_RULES) {
+    if (rule.keywords.some((k) => text.includes(k))) return rule.key;
+  }
+  return "other";
 }
 
 export default function Dashboard({ initialRows, initialError }) {
@@ -48,7 +174,10 @@ export default function Dashboard({ initialRows, initialError }) {
   const [intentFilter, setIntentFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [lang, setLang] = useState("es");
   const reportRef = useRef(null);
+
+  const t = DICT[lang];
 
   const instances = useMemo(() => {
     const map = new Map();
@@ -62,10 +191,10 @@ export default function Dashboard({ initialRows, initialError }) {
       .map(([id, name]) => ({
         id,
         name,
-        label: `${name || "Instancia"} (${id})`,
+        label: `${name || t.instanceFallback} (${id})`,
       }))
       .sort((a, b) => a.id - b.id);
-  }, [rows]);
+  }, [rows, t.instanceFallback]);
 
   const instanceFilteredRows = useMemo(() => {
     if (instanceFilter === "all") return rows;
@@ -90,7 +219,7 @@ export default function Dashboard({ initialRows, initialError }) {
 
   const ratingData = [1, 2, 3, 4, 5].map((n) => ({
     rating: `${n}`,
-    label: `Rating ${n}`,
+    label: `${t.ratingWord} ${n}`,
     cantidad: instanceFilteredRows.filter((r) => r.q1_rating === n).length,
     color: ratingColor(n),
   }));
@@ -108,11 +237,23 @@ export default function Dashboard({ initialRows, initialError }) {
     return [...list].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
   }, [instanceFilteredRows, intentFilter, search]);
 
+  const themeGroups = useMemo(() => {
+    const map = new Map();
+    instanceFilteredRows.forEach((r) => {
+      const key = classifyTheme(r.q3_comment);
+      if (!key) return;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    return Array.from(map.entries())
+      .map(([key, items]) => ({ key, count: items.length, items }))
+      .sort((a, b) => b.count - a.count);
+  }, [instanceFilteredRows]);
+
   const selectedInstanceLabel =
     instanceFilter === "all"
-      ? "Todas las instancias"
-      : instances.find((i) => String(i.id) === String(instanceFilter))?.label ||
-        "Todas las instancias";
+      ? t.allInstances
+      : instances.find((i) => String(i.id) === String(instanceFilter))?.label || t.allInstances;
 
   async function handleRefresh() {
     setLoading(true);
@@ -176,12 +317,19 @@ export default function Dashboard({ initialRows, initialError }) {
     }
   }
 
+  const filtersAppliedText =
+    instanceFilter !== "all" || intentFilter !== "all" || search.trim() !== ""
+      ? `${t.filtersApplied}: ${t.instanceLabel} — ${selectedInstanceLabel}` +
+        (intentFilter !== "all" ? ` · ${t.intentLabel} — ${t.intents[intentFilter]}` : "") +
+        (search.trim() !== "" ? ` · ${t.searchLabel} — "${search.trim()}"` : "")
+      : null;
+
   return (
-    <main
-      ref={reportRef}
-      className={generatingPdf ? "pdf-mode" : ""}
-      style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 16px 64px", background: "#fff" }}
-    >
+    <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 16px 64px" }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <LangToggle lang={lang} onChange={setLang} />
+      </div>
+
       <header
         style={{
           display: "flex",
@@ -195,7 +343,7 @@ export default function Dashboard({ initialRows, initialError }) {
         <div>
           <h1 style={{ fontSize: 24 }}>PRODE 05: Prode Satisfaction Survey</h1>
           <p style={{ color: "var(--text-lighter)", fontSize: 14, margin: "4px 0 0" }}>
-            Fuente: Redash (query 49747) · Actualiza automáticamente cada 60s
+            {t.subtitle}
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -216,7 +364,7 @@ export default function Dashboard({ initialRows, initialError }) {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? "Actualizando..." : "↺ Actualizar datos"}
+              {loading ? `↺ ${t.refreshing}` : `↺ ${t.refresh}`}
             </button>
             <button
               className="no-print"
@@ -242,11 +390,11 @@ export default function Dashboard({ initialRows, initialError }) {
                 <path d="M7 10l5 5 5-5" />
                 <path d="M5 21h14" />
               </svg>
-              {generatingPdf ? "Generando PDF..." : "Descargar PDF"}
+              {generatingPdf ? t.generatingPdf : t.downloadPdf}
             </button>
           </div>
           <p style={{ fontSize: 12, color: "var(--text-lighter)", margin: "8px 0 0" }}>
-            Actualizado: {lastUpdated.toLocaleString("es-AR")}
+            {t.updated}: {lastUpdated.toLocaleString(t.dateLocale)}
           </p>
         </div>
       </header>
@@ -277,13 +425,14 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-lighter)" }}>
-          Filtrar por instancia:
+          {t.filterByInstance}
         </span>
         <InstanceDropdown
           instances={instances}
           value={instanceFilter}
           label={selectedInstanceLabel}
           onChange={setInstanceFilter}
+          t={t}
         />
         {instanceFilter !== "all" && (
           <button
@@ -298,16 +447,14 @@ export default function Dashboard({ initialRows, initialError }) {
               padding: 0,
             }}
           >
-            Limpiar filtro
+            {t.clearFilter}
           </button>
         )}
       </div>
 
-      {(instanceFilter !== "all" || intentFilter !== "all" || search.trim() !== "") && (
+      {filtersAppliedText && (
         <p className="print-only" style={{ fontSize: 12, color: "var(--text-lighter)", marginTop: -12, marginBottom: 20 }}>
-          Filtros aplicados: instancia — {selectedInstanceLabel}
-          {intentFilter !== "all" ? ` · intención — ${INTENT_LABELS[intentFilter]}` : ""}
-          {search.trim() !== "" ? ` · búsqueda — "${search.trim()}"` : ""}
+          {filtersAppliedText}
         </p>
       )}
 
@@ -320,16 +467,17 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <KpiCard
-          label="% Continuidad = Sí"
+          label={t.kpiContinuity}
           value={`${pctYes}%`}
-          sublabel={`Umbral: ${CONTINUITY_THRESHOLD}%`}
+          sublabel={t.kpiThreshold(CONTINUITY_THRESHOLD)}
           highlight={metGoal}
-          info={`Se considera "continuidad alcanzada" cuando el % de respuestas "Sí" en Q2 es mayor o igual al umbral de ${CONTINUITY_THRESHOLD}%. Por debajo de ese umbral, se marca en amarillo como punto de atención.`}
+          info={t.infoContinuity(CONTINUITY_THRESHOLD)}
+          infoLabel={t.infoIconLabel}
         />
-        <KpiCard label="Respuestas" value={total} />
-        <KpiCard label="Rating promedio (1-5)" value={avgRating} />
+        <KpiCard label={t.kpiResponses} value={total} />
+        <KpiCard label={t.kpiAvgRating} value={avgRating} />
         <KpiCard
-          label="No continuarían"
+          label={t.kpiWontContinue}
           value={intentCounts.no}
           accent={intentCounts.no > 0 ? "var(--red-700)" : undefined}
         />
@@ -345,15 +493,11 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-          <h2 style={{ fontSize: 15 }}>Q1 — ¿Qué tan satisfecho estás con la continuidad?</h2>
+          <h2 style={{ fontSize: 15 }}>{t.q1Title}</h2>
           <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>n={total}</span>
         </div>
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart
-            data={ratingData}
-            layout="vertical"
-            margin={{ left: 12, right: 24 }}
-          >
+          <BarChart data={ratingData} layout="vertical" margin={{ left: 12, right: 24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--neutral-200)" horizontal={false} />
             <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, maxRatingCount]} />
             <YAxis type="category" dataKey="label" tick={{ fontSize: 12 }} width={80} />
@@ -373,20 +517,37 @@ export default function Dashboard({ initialRows, initialError }) {
           borderRadius: "var(--radius-m)",
           boxShadow: "var(--shadow-4dp)",
           padding: 20,
+          marginBottom: 24,
         }}
       >
-        <h2 style={{ fontSize: 15, marginBottom: 16 }}>Respuestas individuales</h2>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+          <h2 style={{ fontSize: 15 }}>{t.themesTitle}</h2>
+          <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>{t.themesSubtitle}</span>
+        </div>
+        <ThemeSummary groups={themeGroups} t={t} />
+      </section>
+
+      <section
+        className="no-print"
+        style={{
+          background: "#fff",
+          borderRadius: "var(--radius-m)",
+          boxShadow: "var(--shadow-4dp)",
+          padding: 20,
+        }}
+      >
+        <h2 style={{ fontSize: 15, marginBottom: 16 }}>{t.individualResponses}</h2>
 
         <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           <FilterPill
-            label={`Todos (${total})`}
+            label={`${t.filterAllLabel} (${total})`}
             active={intentFilter === "all"}
             onClick={() => setIntentFilter("all")}
           />
           {INTENT_ORDER.map((k) => (
             <FilterPill
               key={k}
-              label={`${INTENT_LABELS[k]} (${intentCounts[k]})`}
+              label={`${t.intents[k]} (${intentCounts[k]})`}
               active={intentFilter === k}
               onClick={() => setIntentFilter(k)}
             />
@@ -397,7 +558,7 @@ export default function Dashboard({ initialRows, initialError }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar en comentarios..."
+            placeholder={t.searchComments}
             style={{
               flex: "1 1 220px",
               padding: "8px 12px",
@@ -407,26 +568,180 @@ export default function Dashboard({ initialRows, initialError }) {
             }}
           />
           <span style={{ fontSize: 12, color: "var(--text-lighter)", alignSelf: "center" }}>
-            {listRows.length} mostrados
+            {t.shownCount(listRows.length)}
           </span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {listRows.length === 0 && (
-            <p style={{ fontSize: 14, color: "var(--text-lighter)" }}>
-              No hay respuestas para este filtro.
-            </p>
+            <p style={{ fontSize: 14, color: "var(--text-lighter)" }}>{t.noResponsesFilter}</p>
           )}
           {listRows.map((r) => (
-            <ResponseCard key={r.id} row={r} />
+            <ResponseCard key={r.id} row={r} t={t} />
           ))}
         </div>
       </section>
+
+      {/* Snapshot oculto fuera de la pantalla: es lo único que se captura para el PDF.
+          Nunca se muestra, así que generar el PDF no produce ningún parpadeo visual
+          en la página real. Muestra temas agrupados en vez de cada respuesta individual. */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: -99999,
+          width: 900,
+          background: "#fff",
+          padding: 32,
+        }}
+      >
+        <div ref={reportRef}>
+          <h1 style={{ fontSize: 22 }}>PRODE 05: Prode Satisfaction Survey</h1>
+          <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "4px 0 20px" }}>
+            {t.subtitle} · {t.generatedAt}: {lastUpdated.toLocaleString(t.dateLocale)}
+          </p>
+
+          {filtersAppliedText && (
+            <p style={{ fontSize: 12, color: "var(--text-lighter)", marginBottom: 16 }}>
+              {filtersAppliedText}
+            </p>
+          )}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
+            <KpiCard
+              label={t.kpiContinuity}
+              value={`${pctYes}%`}
+              sublabel={t.kpiThreshold(CONTINUITY_THRESHOLD)}
+              highlight={metGoal}
+            />
+            <KpiCard label={t.kpiResponses} value={total} />
+            <KpiCard label={t.kpiAvgRating} value={avgRating} />
+            <KpiCard
+              label={t.kpiWontContinue}
+              value={intentCounts.no}
+              accent={intentCounts.no > 0 ? "var(--red-700)" : undefined}
+            />
+          </div>
+
+          <div
+            style={{
+              border: "1px solid var(--neutral-200)",
+              borderRadius: "var(--radius-m)",
+              padding: 20,
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+              <h2 style={{ fontSize: 15 }}>{t.q1Title}</h2>
+              <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>n={total}</span>
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={ratingData} layout="vertical" margin={{ left: 12, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--neutral-200)" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, maxRatingCount]} />
+                <YAxis type="category" dataKey="label" tick={{ fontSize: 12 }} width={80} />
+                <Bar dataKey="cantidad" radius={[0, 4, 4, 0]} barSize={22}>
+                  {ratingData.map((d) => (
+                    <Cell key={d.rating} fill={d.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div
+            style={{
+              border: "1px solid var(--neutral-200)",
+              borderRadius: "var(--radius-m)",
+              padding: 20,
+            }}
+          >
+            <h2 style={{ fontSize: 15, marginBottom: 12 }}>{t.themesTitle}</h2>
+            <ThemeSummary groups={themeGroups} t={t} />
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
 
-function ResponseCard({ row }) {
+function LangToggle({ lang, onChange }) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        border: "1px solid var(--neutral-300)",
+        borderRadius: 999,
+        overflow: "hidden",
+      }}
+    >
+      {["es", "en"].map((code) => (
+        <button
+          key={code}
+          onClick={() => onChange(code)}
+          aria-pressed={lang === code}
+          style={{
+            padding: "6px 14px",
+            fontSize: 12,
+            fontWeight: 600,
+            border: "none",
+            cursor: "pointer",
+            background: lang === code ? "var(--brand-500)" : "#fff",
+            color: lang === code ? "#fff" : "var(--text-lighter)",
+          }}
+        >
+          {code.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ThemeSummary({ groups, t }) {
+  if (groups.length === 0) {
+    return <p style={{ fontSize: 14, color: "var(--text-lighter)" }}>{t.themesEmpty}</p>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {groups.map((g) => (
+        <div
+          key={g.key}
+          style={{
+            border: "1px solid var(--neutral-200)",
+            borderRadius: "var(--radius-m)",
+            padding: 14,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{t.themes[g.key]}</span>
+            <Pill text={`${g.count}`} color="var(--brand-600)" bg="var(--blueprimary-100)" />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {g.items.slice(0, 3).map((r) => (
+              <p key={r.id} style={{ margin: 0, fontSize: 12, color: "var(--text-lighter)", fontStyle: "italic" }}>
+                “{r.q3_comment.length > 110 ? r.q3_comment.slice(0, 110) + "…" : r.q3_comment}”
+              </p>
+            ))}
+            {g.items.length > 3 && (
+              <p style={{ margin: 0, fontSize: 11, color: "var(--text-lighter)" }}>
+                {t.moreCount(g.items.length - 3)}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ResponseCard({ row, t }) {
   const intent = row.q2_continuity_intent;
   const borderColor = INTENT_COLORS[intent] || "var(--neutral-300)";
   return (
@@ -450,21 +765,21 @@ function ResponseCard({ row }) {
       >
         <div>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
-            Rating {row.q1_rating ?? "-"} ·{" "}
-            {row.instanceName ? `${row.instanceName} (${row.instanceId})` : `Instancia ${row.instanceId}`}
+            {t.ratingWord} {row.q1_rating ?? "-"} ·{" "}
+            {row.instanceName ? `${row.instanceName} (${row.instanceId})` : `${t.instanceFallback} ${row.instanceId}`}
           </p>
           <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--text-lighter)" }}>
-            {formatDate(row.completedAt)}
+            {formatDate(row.completedAt, t.dateLocale)}
           </p>
         </div>
         <Pill
-          text={INTENT_LABELS[intent] || "-"}
+          text={t.intents[intent] || "-"}
           color={INTENT_COLORS[intent] || "var(--text-lighter)"}
           bg={INTENT_BG[intent] || "var(--neutral-100)"}
         />
       </div>
       <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--text-lighter)" }}>
-        Q3 — Comentario
+        {t.q3Label}
       </p>
       <p style={{ margin: "4px 0 0", fontSize: 14 }}>
         {row.q3_comment && row.q3_comment.trim() !== "" ? row.q3_comment : "—"}
@@ -473,7 +788,7 @@ function ResponseCard({ row }) {
   );
 }
 
-function KpiCard({ label, value, sublabel, accent, highlight, info }) {
+function KpiCard({ label, value, sublabel, accent, highlight, info, infoLabel }) {
   return (
     <div
       style={{
@@ -485,7 +800,7 @@ function KpiCard({ label, value, sublabel, accent, highlight, info }) {
         boxShadow: "var(--shadow-4dp)",
       }}
     >
-      {info && <InfoTooltip text={info} />}
+      {info && <InfoTooltip text={info} label={infoLabel} />}
       <p
         style={{
           margin: 0,
@@ -506,14 +821,14 @@ function KpiCard({ label, value, sublabel, accent, highlight, info }) {
   );
 }
 
-function InfoTooltip({ text }) {
+function InfoTooltip({ text, label }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="no-print" style={{ position: "absolute", top: 10, right: 10 }}>
       <button
         onClick={() => setOpen((o) => !o)}
         onBlur={() => setOpen(false)}
-        aria-label="Ver criterio"
+        aria-label={label || "info"}
         style={{
           width: 18,
           height: 18,
@@ -577,7 +892,7 @@ function Pill({ text, color, bg, border }) {
   );
 }
 
-function InstanceDropdown({ instances, value, label, onChange }) {
+function InstanceDropdown({ instances, value, label, onChange, t }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -643,7 +958,7 @@ function InstanceDropdown({ instances, value, label, onChange }) {
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar por nombre o id..."
+                placeholder={t.searchInstance}
                 style={{
                   width: "100%",
                   padding: "6px 10px",
@@ -655,14 +970,10 @@ function InstanceDropdown({ instances, value, label, onChange }) {
               />
             </div>
             <div style={{ overflowY: "auto" }}>
-              <DropdownOption
-                text="Todas las instancias"
-                selected={value === "all"}
-                onClick={() => select("all")}
-              />
+              <DropdownOption text={t.allInstances} selected={value === "all"} onClick={() => select("all")} />
               {filtered.length === 0 && (
                 <p style={{ padding: "10px 14px", fontSize: 13, color: "var(--text-lighter)" }}>
-                  Sin resultados.
+                  {t.noResults}
                 </p>
               )}
               {filtered.map((i) => (

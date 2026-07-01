@@ -158,6 +158,7 @@ export default function Dashboard({ initialRows, initialError }) {
               border={metGoal ? "#abedb6" : "#fbeb9d"}
             />
             <button
+              className="no-print"
               onClick={handleRefresh}
               disabled={loading}
               style={{
@@ -173,6 +174,22 @@ export default function Dashboard({ initialRows, initialError }) {
               }}
             >
               {loading ? "Actualizando..." : "↺ Actualizar datos"}
+            </button>
+            <button
+              className="no-print"
+              onClick={() => window.print()}
+              style={{
+                background: "var(--brand-500)",
+                color: "#fff",
+                border: "1px solid var(--brand-500)",
+                borderRadius: "var(--radius-m)",
+                padding: "6px 14px",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              ⭳ Descargar PDF
             </button>
           </div>
           <p style={{ fontSize: 12, color: "var(--text-lighter)", margin: "8px 0 0" }}>
@@ -197,6 +214,7 @@ export default function Dashboard({ initialRows, initialError }) {
       )}
 
       <div
+        className="no-print"
         style={{
           display: "flex",
           alignItems: "center",
@@ -231,6 +249,14 @@ export default function Dashboard({ initialRows, initialError }) {
           </button>
         )}
       </div>
+
+      {(instanceFilter !== "all" || intentFilter !== "all" || search.trim() !== "") && (
+        <p className="print-only" style={{ fontSize: 12, color: "var(--text-lighter)", marginTop: -12, marginBottom: 20 }}>
+          Filtros aplicados: instancia — {selectedInstanceLabel}
+          {intentFilter !== "all" ? ` · intención — ${INTENT_LABELS[intentFilter]}` : ""}
+          {search.trim() !== "" ? ` · búsqueda — "${search.trim()}"` : ""}
+        </p>
+      )}
 
       <section
         style={{
@@ -297,7 +323,7 @@ export default function Dashboard({ initialRows, initialError }) {
       >
         <h2 style={{ fontSize: 15, marginBottom: 16 }}>Respuestas individuales</h2>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           <FilterPill
             label={`Todos (${total})`}
             active={intentFilter === "all"}
@@ -313,7 +339,7 @@ export default function Dashboard({ initialRows, initialError }) {
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}

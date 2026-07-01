@@ -67,3 +67,33 @@ h3 {
 button {
   font-family: inherit;
 }
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  section {
+    box-shadow: none !important;
+    border: 1px solid var(--neutral-200) !important;
+    page-break-inside: avoid;
+  }
+}

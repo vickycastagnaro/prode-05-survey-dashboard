@@ -32,7 +32,7 @@ const DICT = {
     pdfTitle: "Encuesta de Satisfacción",
     instanceShownLabel: "Instancia:",
     userFallback: "Usuario",
-    subtitle: "Fuente: Redash (query 49780) · Actualiza automáticamente cada 60s",
+    subtitle: "Fuente: Redash (query 49867) · Actualiza automáticamente cada 60s",
     refresh: "Actualizar datos",
     refreshing: "Actualizando...",
     downloadPdf: "Descargar PDF",
@@ -86,7 +86,7 @@ const DICT = {
     pdfTitle: "Satisfaction Survey",
     instanceShownLabel: "Instance:",
     userFallback: "User",
-    subtitle: "Source: Redash (query 49780) · Auto-refreshes every 60s",
+    subtitle: "Source: Redash (query 49867) · Auto-refreshes every 60s",
     refresh: "Refresh data",
     refreshing: "Refreshing...",
     downloadPdf: "Download PDF",
@@ -263,6 +263,11 @@ export default function Dashboard({ initialRows, initialError }) {
       ? t.allInstances
       : instances.find((i) => String(i.id) === String(instanceFilter))?.label || t.allInstances;
 
+  const selectedInstanceName =
+    instanceFilter === "all"
+      ? t.allInstances
+      : instances.find((i) => String(i.id) === String(instanceFilter))?.name || t.instanceFallback;
+
   async function handleRefresh() {
     setLoading(true);
     try {
@@ -350,13 +355,8 @@ export default function Dashboard({ initialRows, initialError }) {
       >
         <div>
           <h1 style={{ fontSize: 24 }}>{t.title}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 0" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-lighter)" }}>
-              {t.instanceShownLabel}
-            </span>
-            <Pill text={selectedInstanceLabel} color="var(--brand-600)" bg="var(--blueprimary-100)" />
-          </div>
-          <p style={{ color: "var(--text-lighter)", fontSize: 14, margin: "8px 0 0" }}>
+          <InstanceBadge label={t.instanceShownLabel} name={selectedInstanceName} />
+          <p style={{ color: "var(--text-lighter)", fontSize: 14, margin: "10px 0 0" }}>
             {t.subtitle}
           </p>
         </div>
@@ -612,13 +612,8 @@ export default function Dashboard({ initialRows, initialError }) {
       >
         <div ref={reportRef}>
           <h1 style={{ fontSize: 22 }}>{t.pdfTitle}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 0" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-lighter)" }}>
-              {t.instanceShownLabel}
-            </span>
-            <Pill text={selectedInstanceLabel} color="var(--brand-600)" bg="var(--blueprimary-100)" />
-          </div>
-          <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "8px 0 24px" }}>
+          <InstanceBadge label={t.instanceShownLabel} name={selectedInstanceName} />
+          <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "10px 0 24px" }}>
             {t.subtitle} · {t.generatedAt}: {lastUpdated.toLocaleString(t.dateLocale)}
           </p>
 
@@ -690,6 +685,27 @@ export default function Dashboard({ initialRows, initialError }) {
         </div>
       </div>
     </main>
+  );
+}
+
+function InstanceBadge({ label, name }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "10px 0 0" }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-lighter)" }}>{label}</span>
+      <span
+        style={{
+          display: "inline-block",
+          background: "var(--blueprimary-100)",
+          color: "var(--brand-600)",
+          borderRadius: 999,
+          padding: "6px 16px",
+          fontSize: 16,
+          fontWeight: 600,
+        }}
+      >
+        {name}
+      </span>
+    </div>
   );
 }
 

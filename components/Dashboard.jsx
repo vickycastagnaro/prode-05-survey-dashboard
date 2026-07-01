@@ -607,10 +607,9 @@ export default function Dashboard({ initialRows, initialError }) {
           left: -99999,
           width: 960,
           background: "#fff",
-          padding: 56,
         }}
       >
-        <div ref={reportRef}>
+        <div ref={reportRef} style={{ width: 960, background: "#fff", padding: 56, boxSizing: "border-box" }}>
           <h1 style={{ fontSize: 22 }}>{t.pdfTitle}</h1>
           <InstanceBadge label={t.instanceShownLabel} name={selectedInstanceName} />
           <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "10px 0 24px" }}>

@@ -97,3 +97,16 @@ button {
     page-break-inside: avoid;
   }
 }
+
+.pdf-mode .no-print {
+  display: none !important;
+}
+
+.pdf-mode .print-only {
+  display: block !important;
+}
+
+.pdf-mode section {
+  box-shadow: none !important;
+  border: 1px solid var(--neutral-200) !important;
+}

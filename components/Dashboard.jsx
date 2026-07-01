@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -47,6 +47,8 @@ export default function Dashboard({ initialRows, initialError }) {
   const [instanceFilter, setInstanceFilter] = useState("all");
   const [intentFilter, setIntentFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const reportRef = useRef(null);
 
   const instances = useMemo(() => {
     const map = new Map();
@@ -131,8 +133,55 @@ export default function Dashboard({ initialRows, initialError }) {
     }
   }
 
+  async function handleDownloadPdf() {
+    if (!reportRef.current) return;
+    setGeneratingPdf(true);
+    try {
+      await new Promise((r) => requestAnimationFrame(r));
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+      });
+
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgData = canvas.toDataURL("image/png");
+
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      pdf.save(`prode-05-survey-${dateStr}.pdf`);
+    } catch (err) {
+      setError("No se pudo generar el PDF: " + err.message);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }
+
   return (
-    <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 16px 64px" }}>
+    <main
+      ref={reportRef}
+      className={generatingPdf ? "pdf-mode" : ""}
+      style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 16px 64px", background: "#fff" }}
+    >
       <header
         style={{
           display: "flex",
@@ -171,7 +220,8 @@ export default function Dashboard({ initialRows, initialError }) {
             </button>
             <button
               className="no-print"
-              onClick={() => window.print()}
+              onClick={handleDownloadPdf}
+              disabled={generatingPdf}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -183,7 +233,8 @@ export default function Dashboard({ initialRows, initialError }) {
                 padding: "6px 14px",
                 fontSize: 13,
                 fontWeight: 600,
-                cursor: "pointer",
+                cursor: generatingPdf ? "default" : "pointer",
+                opacity: generatingPdf ? 0.7 : 1,
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -191,7 +242,7 @@ export default function Dashboard({ initialRows, initialError }) {
                 <path d="M7 10l5 5 5-5" />
                 <path d="M5 21h14" />
               </svg>
-              Descargar PDF
+              {generatingPdf ? "Generando PDF..." : "Descargar PDF"}
             </button>
           </div>
           <p style={{ fontSize: 12, color: "var(--text-lighter)", margin: "8px 0 0" }}>

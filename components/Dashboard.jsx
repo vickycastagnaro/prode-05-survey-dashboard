@@ -341,7 +341,7 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 24 }}>PRODE 05: Prode Satisfaction Survey</h1>
+          <h1 style={{ fontSize: 24 }}>PRODE 05: Encuesta Satisfacción</h1>
           <p style={{ color: "var(--text-lighter)", fontSize: 14, margin: "4px 0 0" }}>
             {t.subtitle}
           </p>
@@ -597,7 +597,7 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <div ref={reportRef}>
-          <h1 style={{ fontSize: 22 }}>PRODE 05: Prode Satisfaction Survey</h1>
+          <h1 style={{ fontSize: 22 }}>Encuesta de Satisfacción</h1>
           <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "4px 0 20px" }}>
             {t.subtitle} · {t.generatedAt}: {lastUpdated.toLocaleString(t.dateLocale)}
           </p>

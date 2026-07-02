@@ -33,7 +33,7 @@ const DICT = {
     instanceShownLabel: "Instancia:",
     filterByIntent: "Intención:",
     userFallback: "Usuario",
-    subtitle: "Fuente: Redash (query 49867) · Se actualiza sola cada 10 minutos",
+    subtitle: "Fuente: Redash (query 49867) · Redash recalcula los datos cada 1 hora",
     refresh: "Actualizar datos",
     refreshing: "Actualizando...",
     downloadPdf: "Descargar PDF",
@@ -88,7 +88,7 @@ const DICT = {
     instanceShownLabel: "Instance:",
     filterByIntent: "Intent:",
     userFallback: "User",
-    subtitle: "Source: Redash (query 49867) · Auto-refreshes every 10 minutes",
+    subtitle: "Source: Redash (query 49867) · Redash recomputes the data every hour",
     refresh: "Refresh data",
     refreshing: "Refreshing...",
     downloadPdf: "Download PDF",
@@ -305,7 +305,7 @@ export default function Dashboard({ initialRows, initialError }) {
   handleRefreshRef.current = handleRefresh;
 
   useEffect(() => {
-    const AUTO_REFRESH_MS = 10 * 60 * 1000;
+    const AUTO_REFRESH_MS = 5 * 60 * 1000;
     const id = setInterval(() => {
       handleRefreshRef.current();
     }, AUTO_REFRESH_MS);

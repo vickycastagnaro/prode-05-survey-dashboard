@@ -57,7 +57,13 @@ const DICT = {
     infoContinuity: (n) =>
       `Se considera "continuidad alcanzada" cuando el % de respuestas "Sí" en Q2 es mayor o igual al umbral de ${n}%. Por debajo de ese umbral, se marca en amarillo como punto de atención.`,
     infoIconLabel: "Ver criterio",
-    q1Title: "Q1 — ¿Qué tan satisfecho estás con la continuidad?",
+    q1Title: "Q1 — ¿Cómo fue tu experiencia usando Humand durante el Mundial?",
+    q2Title: "Q2 — ¿Te gustaría que tu empresa siga usando Humand después del Mundial?",
+    intentFull: {
+      yes: "Sí, me gustaría seguir usándola",
+      maybe: "Todavía no lo decidí",
+      no: "No, preferiría no continuar",
+    },
     themesTitle: "Temas mencionados en los comentarios (Q3)",
     themesSubtitle: "agrupado automáticamente por palabras clave",
     themesEmpty: "Todavía no hay suficientes comentarios para agrupar por tema.",
@@ -112,7 +118,13 @@ const DICT = {
     infoContinuity: (n) =>
       `"Continuity reached" is shown when the % of "Yes" answers in Q2 is at or above the ${n}% threshold. Below that, it's flagged yellow as a point of attention.`,
     infoIconLabel: "View criteria",
-    q1Title: "Q1 — How satisfied are you with continuity?",
+    q1Title: "Q1 — How was your experience using Humand during the World Cup?",
+    q2Title: "Q2 — Would you like your company to keep using Humand after the World Cup?",
+    intentFull: {
+      yes: "Yes, I'd like to keep using it",
+      maybe: "Haven't decided yet",
+      no: "No, I'd rather not continue",
+    },
     themesTitle: "Topics mentioned in comments (Q3)",
     themesSubtitle: "grouped automatically by keywords",
     themesEmpty: "Not enough comments yet to group by topic.",
@@ -241,6 +253,14 @@ export default function Dashboard({ initialRows, initialError }) {
   });
   const pctYes = total ? Math.round((intentCounts.yes / total) * 100) : 0;
   const metGoal = pctYes >= CONTINUITY_THRESHOLD;
+
+  const q2Data = INTENT_ORDER.map((k) => ({
+    key: k,
+    label: t.intentFull[k],
+    cantidad: intentCounts[k],
+    color: INTENT_COLORS[k],
+  }));
+  const maxQ2Count = Math.max(1, ...q2Data.map((d) => d.cantidad));
 
   const ratingData = [1, 2, 3, 4, 5].map((n) => ({
     rating: `${n}`,
@@ -583,6 +603,34 @@ export default function Dashboard({ initialRows, initialError }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+          <h2 style={{ fontSize: 16 }}>{t.q2Title}</h2>
+          <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>n={total}</span>
+        </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={q2Data} layout="vertical" margin={{ left: 12, right: 24 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--neutral-200)" horizontal={false} />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, maxQ2Count]} />
+            <YAxis type="category" dataKey="label" tick={{ fontSize: 12 }} width={200} />
+            <Tooltip />
+            <Bar dataKey="cantidad" radius={[0, 4, 4, 0]} barSize={22}>
+              {q2Data.map((d) => (
+                <Cell key={d.key} fill={d.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </section>
+
+      <section
+        style={{
+          background: "#fff",
+          borderRadius: "var(--radius-l)",
+          boxShadow: "var(--shadow-4dp)",
+          padding: 24,
+          marginBottom: 32,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
           <h2 style={{ fontSize: 16 }}>{t.themesTitle}</h2>
           <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>{t.themesSubtitle}</span>
         </div>
@@ -696,6 +744,32 @@ export default function Dashboard({ initialRows, initialError }) {
                 <Bar dataKey="cantidad" radius={[0, 4, 4, 0]} barSize={22}>
                   {ratingData.map((d) => (
                     <Cell key={d.rating} fill={d.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div
+            style={{
+              border: "1px solid var(--neutral-200)",
+              borderRadius: "var(--radius-l)",
+              padding: 24,
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+              <h2 style={{ fontSize: 16 }}>{t.q2Title}</h2>
+              <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>n={total}</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={q2Data} layout="vertical" margin={{ left: 12, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--neutral-200)" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, maxQ2Count]} />
+                <YAxis type="category" dataKey="label" tick={{ fontSize: 12 }} width={200} />
+                <Bar dataKey="cantidad" radius={[0, 4, 4, 0]} barSize={22}>
+                  {q2Data.map((d) => (
+                    <Cell key={d.key} fill={d.color} />
                   ))}
                 </Bar>
               </BarChart>

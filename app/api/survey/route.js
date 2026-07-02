@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const rows = await fetchSurveyRows({ fresh: true });
-    return NextResponse.json({ rows, fetchedAt: new Date().toISOString() });
+    const { rows, retrievedAt } = await fetchSurveyRows({ fresh: true });
+    return NextResponse.json({ rows, retrievedAt });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -12,6 +12,7 @@ import {
   Cell,
 } from "recharts";
 
+// Colores de texto (oscuros, para leer sobre fondos claros: pills, badges).
 const INTENT_COLORS = {
   yes: "#249637",
   maybe: "#935214",
@@ -21,6 +22,12 @@ const INTENT_BG = {
   yes: "#e6fbe9",
   maybe: "#fcf7ce",
   no: "#fde3e3",
+};
+// Colores para rellenos de gráficos (más vivos, mismos usados en el chart de Q1).
+const CHART_INTENT_COLORS = {
+  yes: "#4ed364",
+  maybe: "#f0b623",
+  no: "#e74444",
 };
 const INTENT_ORDER = ["yes", "maybe", "no"];
 
@@ -187,11 +194,11 @@ function classifyTheme(comment) {
   return "other";
 }
 
-export default function Dashboard({ initialRows, initialError }) {
+export default function Dashboard({ initialRows, initialError, initialRetrievedAt }) {
   const [rows, setRows] = useState(initialRows || []);
   const [error, setError] = useState(initialError || null);
   const [loading, setLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [redashUpdatedAt, setRedashUpdatedAt] = useState(initialRetrievedAt || null);
   const [instanceFilter, setInstanceFilter] = useState("all");
   const [intentFilter, setIntentFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -258,7 +265,7 @@ export default function Dashboard({ initialRows, initialError }) {
     key: k,
     label: t.intentFull[k],
     cantidad: intentCounts[k],
-    color: INTENT_COLORS[k],
+    color: CHART_INTENT_COLORS[k],
   }));
   const maxQ2Count = Math.max(1, ...q2Data.map((d) => d.cantidad));
 
@@ -312,7 +319,7 @@ export default function Dashboard({ initialRows, initialError }) {
       } else {
         setRows(json.rows);
         setError(null);
-        setLastUpdated(new Date());
+        setRedashUpdatedAt(json.retrievedAt || null);
       }
     } catch (err) {
       setError(err.message);
@@ -453,7 +460,7 @@ export default function Dashboard({ initialRows, initialError }) {
             </button>
           </div>
           <p style={{ fontSize: 12, color: "var(--text-lighter)", margin: "8px 0 0" }}>
-            {t.updated}: {lastUpdated.toLocaleString(t.dateLocale)}
+            {t.updated}: {formatDate(redashUpdatedAt, t.dateLocale)}
           </p>
         </div>
       </header>
@@ -692,7 +699,7 @@ export default function Dashboard({ initialRows, initialError }) {
           <h1 style={{ fontSize: 22 }}>{t.pdfTitle}</h1>
           <InstanceBadge label={t.instanceShownLabel} name={selectedInstanceName} />
           <p style={{ color: "var(--text-lighter)", fontSize: 13, margin: "10px 0 24px" }}>
-            {t.subtitle} · {t.generatedAt}: {lastUpdated.toLocaleString(t.dateLocale)}
+            {t.subtitle} · {t.generatedAt}: {formatDate(redashUpdatedAt, t.dateLocale)}
           </p>
 
           {filtersAppliedText && (

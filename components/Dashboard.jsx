@@ -94,6 +94,23 @@ const DICT = {
       other: "Otros comentarios",
     },
     dateLocale: "es-AR",
+    downloadModalTitle: "Antes de descargar",
+    downloadModalDesc: "Para llevar un registro de quién descarga el reporte y con qué filtros, contanos quién sos.",
+    nameLabel: "Nombre",
+    emailLabel: "Email (opcional)",
+    cancelLabel: "Cancelar",
+    confirmDownloadLabel: "Descargar",
+    nameRequired: "Ingresá tu nombre para continuar.",
+    downloadLogTitle: "Historial de descargas",
+    downloadLogSubtitle: "quién descargó el PDF y con qué filtros",
+    downloadLogEmpty: "Todavía no se descargó ningún PDF.",
+    downloadLogLoading: "Cargando historial...",
+    colName: "Nombre",
+    colEmail: "Email",
+    colDate: "Fecha",
+    colInstance: "Instancia",
+    colIntent: "Intención",
+    colLang: "Idioma",
   },
   en: {
     title: "PRODE 05: Satisfaction Survey",
@@ -155,6 +172,23 @@ const DICT = {
       other: "Other comments",
     },
     dateLocale: "en-US",
+    downloadModalTitle: "Before downloading",
+    downloadModalDesc: "To keep a record of who downloads the report and with which filters, tell us who you are.",
+    nameLabel: "Name",
+    emailLabel: "Email (optional)",
+    cancelLabel: "Cancel",
+    confirmDownloadLabel: "Download",
+    nameRequired: "Enter your name to continue.",
+    downloadLogTitle: "Download history",
+    downloadLogSubtitle: "who downloaded the PDF and with which filters",
+    downloadLogEmpty: "No PDF has been downloaded yet.",
+    downloadLogLoading: "Loading history...",
+    colName: "Name",
+    colEmail: "Email",
+    colDate: "Date",
+    colInstance: "Instance",
+    colIntent: "Intent",
+    colLang: "Language",
   },
 };
 
@@ -204,6 +238,12 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
   const [search, setSearch] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [lang, setLang] = useState("es");
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloaderName, setDownloaderName] = useState("");
+  const [downloaderEmail, setDownloaderEmail] = useState("");
+  const [nameError, setNameError] = useState(false);
+  const [downloadLog, setDownloadLog] = useState([]);
+  const [loadingLog, setLoadingLog] = useState(false);
   const reportRef = useRef(null);
 
   const t = DICT[lang];
@@ -339,6 +379,23 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
     return () => clearInterval(id);
   }, []);
 
+  async function fetchDownloadLog() {
+    setLoadingLog(true);
+    try {
+      const res = await fetch("/api/log-download", { cache: "no-store" });
+      const json = await res.json();
+      setDownloadLog(json.log || []);
+    } catch (err) {
+      // silencioso: el historial no es crítico para el resto del dashboard
+    } finally {
+      setLoadingLog(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchDownloadLog();
+  }, []);
+
   async function handleDownloadPdf() {
     if (!reportRef.current) return;
     setGeneratingPdf(true);
@@ -380,6 +437,39 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
     } finally {
       setGeneratingPdf(false);
     }
+  }
+
+  async function handleConfirmDownload() {
+    if (!downloaderName.trim()) {
+      setNameError(true);
+      return;
+    }
+    setNameError(false);
+    setShowDownloadModal(false);
+
+    const intentLabelForLog = intentFilter === "all" ? t.filterAllLabel : t.intents[intentFilter];
+
+    await handleDownloadPdf();
+
+    try {
+      await fetch("/api/log-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: downloaderName.trim(),
+          email: downloaderEmail.trim(),
+          instanceLabel: selectedInstanceLabel,
+          intentLabel: intentLabelForLog,
+          lang,
+        }),
+      });
+    } catch (err) {
+      // no bloqueamos la descarga si falla el registro
+    }
+
+    setDownloaderName("");
+    setDownloaderEmail("");
+    fetchDownloadLog();
   }
 
   const filtersAppliedText =
@@ -434,7 +524,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
             </button>
             <button
               className="no-print"
-              onClick={handleDownloadPdf}
+              onClick={() => setShowDownloadModal(true)}
               disabled={generatingPdf}
               style={{
                 display: "inline-flex",
@@ -682,6 +772,42 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
           ))}
         </div>
       </section>
+
+      <section
+        className="no-print"
+        style={{
+          background: "#fff",
+          borderRadius: "var(--radius-l)",
+          boxShadow: "var(--shadow-4dp)",
+          padding: 24,
+          marginTop: 32,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 16 }}>
+          <h2 style={{ fontSize: 16 }}>{t.downloadLogTitle}</h2>
+          <span style={{ fontSize: 12, color: "var(--text-lighter)" }}>{t.downloadLogSubtitle}</span>
+        </div>
+        <DownloadLogTable log={downloadLog} loading={loadingLog} t={t} />
+      </section>
+
+      {showDownloadModal && (
+        <DownloadModal
+          t={t}
+          name={downloaderName}
+          email={downloaderEmail}
+          nameError={nameError}
+          onNameChange={(v) => {
+            setDownloaderName(v);
+            if (v.trim()) setNameError(false);
+          }}
+          onEmailChange={setDownloaderEmail}
+          onCancel={() => {
+            setShowDownloadModal(false);
+            setNameError(false);
+          }}
+          onConfirm={handleConfirmDownload}
+        />
+      )}
 
       {/* Snapshot oculto fuera de la pantalla: es lo único que se captura para el PDF.
           Nunca se muestra, así que generar el PDF no produce ningún parpadeo visual
@@ -1161,6 +1287,162 @@ function DropdownOption({ text, selected, onClick }) {
     >
       {text}
     </button>
+  );
+}
+
+function DownloadModal({ t, name, email, nameError, onNameChange, onEmailChange, onCancel, onConfirm }) {
+  return (
+    <div
+      className="no-print"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15, 23, 42, 0.4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 50,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "var(--radius-l)",
+          boxShadow: "var(--shadow-8dp)",
+          padding: 24,
+          width: "100%",
+          maxWidth: 360,
+        }}
+      >
+        <h3 style={{ fontSize: 18, margin: "0 0 8px" }}>{t.downloadModalTitle}</h3>
+        <p style={{ fontSize: 12, color: "var(--text-lighter)", margin: "0 0 16px" }}>
+          {t.downloadModalDesc}
+        </p>
+
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+          {t.nameLabel}
+        </label>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "8px 12px",
+            borderRadius: "var(--radius-s)",
+            border: `1px solid ${nameError ? "var(--red-700)" : "var(--neutral-300)"}`,
+            fontSize: 14,
+            boxSizing: "border-box",
+            marginBottom: nameError ? 4 : 16,
+          }}
+        />
+        {nameError && (
+          <p style={{ fontSize: 12, color: "var(--red-700)", margin: "0 0 12px" }}>{t.nameRequired}</p>
+        )}
+
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+          {t.emailLabel}
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => onEmailChange(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "8px 12px",
+            borderRadius: "var(--radius-s)",
+            border: "1px solid var(--neutral-300)",
+            fontSize: 14,
+            boxSizing: "border-box",
+            marginBottom: 20,
+          }}
+        />
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              background: "#fff",
+              color: "var(--text-default)",
+              border: "1px solid var(--neutral-300)",
+              borderRadius: "var(--radius-s)",
+              padding: "8px 16px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {t.cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              background: "var(--brand-500)",
+              color: "#fff",
+              border: "1px solid var(--brand-500)",
+              borderRadius: "var(--radius-s)",
+              padding: "8px 16px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {t.confirmDownloadLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DownloadLogTable({ log, loading, t }) {
+  if (loading) {
+    return <p style={{ fontSize: 14, color: "var(--text-lighter)" }}>{t.downloadLogLoading}</p>;
+  }
+  if (log.length === 0) {
+    return <p style={{ fontSize: 14, color: "var(--text-lighter)" }}>{t.downloadLogEmpty}</p>;
+  }
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead>
+          <tr>
+            {[t.colName, t.colEmail, t.colDate, t.colInstance, t.colIntent, t.colLang].map((h) => (
+              <th
+                key={h}
+                style={{
+                  textAlign: "left",
+                  padding: "8px 12px",
+                  borderBottom: "1px solid var(--neutral-200)",
+                  color: "var(--text-lighter)",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {log.map((entry, idx) => (
+            <tr key={idx}>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.name || "-"}</td>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.email || "-"}</td>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)", whiteSpace: "nowrap" }}>
+                {formatDate(entry.date, t.dateLocale)}
+              </td>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.instance || "-"}</td>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.intent || "-"}</td>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>
+                {(entry.lang || "-").toUpperCase()}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

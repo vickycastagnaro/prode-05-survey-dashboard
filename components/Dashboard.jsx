@@ -109,8 +109,15 @@ const DICT = {
     colEmail: "Email",
     colDate: "Fecha",
     colInstance: "Instancia",
+    colAe: "AE",
     colIntent: "Intención",
     colLang: "Idioma",
+    filterByAe: "Filtrar por AE:",
+    allAes: "Todos los AE",
+    searchAe: "Buscar AE...",
+    aeUnassigned: "Sin asignar",
+    aeLabel: "AE",
+    aeDataNote: (date) => `Datos de AE cargados manualmente al ${date} (no se actualizan solos)`,
   },
   en: {
     title: "PRODE 05: Satisfaction Survey",
@@ -187,10 +194,19 @@ const DICT = {
     colEmail: "Email",
     colDate: "Date",
     colInstance: "Instance",
+    colAe: "AE",
     colIntent: "Intent",
     colLang: "Language",
+    filterByAe: "Filter by AE:",
+    allAes: "All AEs",
+    searchAe: "Search AE...",
+    aeUnassigned: "Unassigned",
+    aeLabel: "AE",
+    aeDataNote: (date) => `AE data manually loaded on ${date} (does not auto-update)`,
   },
 };
+
+const AE_DATA_DATE = "03/07/2026";
 
 function formatDate(iso, locale) {
   if (!iso) return "-";
@@ -234,6 +250,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
   const [loading, setLoading] = useState(false);
   const [redashUpdatedAt, setRedashUpdatedAt] = useState(initialRetrievedAt || null);
   const [instanceFilter, setInstanceFilter] = useState("all");
+  const [aeFilter, setAeFilter] = useState("all");
   const [intentFilter, setIntentFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -270,22 +287,39 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
     return rows.filter((r) => String(r.instanceId) === String(instanceFilter));
   }, [rows, instanceFilter]);
 
-  // Conteo por intención dentro del alcance de instancia (sin aplicar el propio
-  // filtro de intención) — se usa solo para los números en los pills de filtro,
-  // así siempre muestran cuántas respuestas hay disponibles para cada opción.
+  const aeOptions = useMemo(() => {
+    const set = new Set();
+    rows.forEach((r) => {
+      if (r.aeName) set.add(r.aeName);
+    });
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ id: name, name, label: name }));
+  }, [rows]);
+
+  const aeFilteredRows = useMemo(() => {
+    if (aeFilter === "all") return instanceFilteredRows;
+    return instanceFilteredRows.filter((r) => r.aeName === aeFilter);
+  }, [instanceFilteredRows, aeFilter]);
+
+  // Conteo por intención dentro del alcance de instancia + AE (sin aplicar el
+  // propio filtro de intención) — se usa solo para los números en los pills de
+  // filtro, así siempre muestran cuántas respuestas hay disponibles para cada
+  // opción.
   const pillIntentCounts = { yes: 0, maybe: 0, no: 0 };
-  instanceFilteredRows.forEach((r) => {
+  aeFilteredRows.forEach((r) => {
     if (r.q2_continuity_intent && pillIntentCounts[r.q2_continuity_intent] != null) {
       pillIntentCounts[r.q2_continuity_intent] += 1;
     }
   });
 
-  // Filtro global: instancia + intención (Sí/Tal vez/No). Afecta KPIs, gráfico,
-  // temas y la lista de respuestas individuales — no solo la última sección.
+  // Filtro global: instancia + AE + intención (Sí/Tal vez/No). Afecta KPIs,
+  // gráfico, temas y la lista de respuestas individuales — no solo la última
+  // sección.
   const scopedRows = useMemo(() => {
-    if (intentFilter === "all") return instanceFilteredRows;
-    return instanceFilteredRows.filter((r) => r.q2_continuity_intent === intentFilter);
-  }, [instanceFilteredRows, intentFilter]);
+    if (intentFilter === "all") return aeFilteredRows;
+    return aeFilteredRows.filter((r) => r.q2_continuity_intent === intentFilter);
+  }, [aeFilteredRows, intentFilter]);
 
   const total = scopedRows.length;
   const avgRating = total
@@ -348,6 +382,8 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
     instanceFilter === "all"
       ? t.allInstances
       : instances.find((i) => String(i.id) === String(instanceFilter))?.name || t.instanceFallback;
+
+  const selectedAeLabel = aeFilter === "all" ? t.allAes : aeFilter;
 
   async function handleRefresh() {
     setLoading(true);
@@ -459,6 +495,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
           name: downloaderName.trim(),
           email: downloaderEmail.trim(),
           instanceLabel: selectedInstanceLabel,
+          aeLabel: selectedAeLabel,
           intentLabel: intentLabelForLog,
           lang,
         }),
@@ -473,8 +510,9 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
   }
 
   const filtersAppliedText =
-    instanceFilter !== "all" || intentFilter !== "all" || search.trim() !== ""
+    instanceFilter !== "all" || aeFilter !== "all" || intentFilter !== "all" || search.trim() !== ""
       ? `${t.filtersApplied}: ${t.instanceLabel} — ${selectedInstanceLabel}` +
+        (aeFilter !== "all" ? ` · ${t.aeLabel} — ${selectedAeLabel}` : "") +
         (intentFilter !== "all" ? ` · ${t.intentLabel} — ${t.intents[intentFilter]}` : "") +
         (search.trim() !== "" ? ` · ${t.searchLabel} — "${search.trim()}"` : "")
       : null;
@@ -610,13 +648,54 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
 
       <div
         className="no-print"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-lighter)" }}>
+          {t.filterByAe}
+        </span>
+        <InstanceDropdown
+          instances={aeOptions}
+          value={aeFilter}
+          label={selectedAeLabel}
+          onChange={setAeFilter}
+          t={{ ...t, allInstances: t.allAes, searchInstance: t.searchAe }}
+        />
+        {aeFilter !== "all" && (
+          <button
+            onClick={() => setAeFilter("all")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--brand-600)",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            {t.clearFilter}
+          </button>
+        )}
+        <span className="no-print" style={{ fontSize: 12, color: "var(--text-lighter)" }}>
+          {t.aeDataNote(AE_DATA_DATE)}
+        </span>
+      </div>
+
+      <div
+        className="no-print"
         style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}
       >
         <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-lighter)" }}>
           {t.filterByIntent}
         </span>
         <FilterPill
-          label={`${t.filterAllLabel} (${instanceFilteredRows.length})`}
+          label={`${t.filterAllLabel} (${aeFilteredRows.length})`}
           active={intentFilter === "all"}
           onClick={() => setIntentFilter("all")}
         />
@@ -1408,7 +1487,7 @@ function DownloadLogTable({ log, loading, t }) {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
         <thead>
           <tr>
-            {[t.colName, t.colEmail, t.colDate, t.colInstance, t.colIntent, t.colLang].map((h) => (
+            {[t.colName, t.colEmail, t.colDate, t.colInstance, t.colAe, t.colIntent, t.colLang].map((h) => (
               <th
                 key={h}
                 style={{
@@ -1434,6 +1513,7 @@ function DownloadLogTable({ log, loading, t }) {
                 {formatDate(entry.date, t.dateLocale)}
               </td>
               <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.instance || "-"}</td>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.ae || "-"}</td>
               <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.intent || "-"}</td>
               <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>
                 {(entry.lang || "-").toUpperCase()}

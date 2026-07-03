@@ -53,7 +53,20 @@ Pasos para activarlo:
 
 Si estas variables no están configuradas, el resto del dashboard sigue funcionando normal — el historial simplemente aparece vacío y la descarga de PDF no se ve afectada.
 
-## 5. Seguridad
+## 5. Mapeo de AE por instancia
+
+El filtro "AE" del dashboard usa un archivo estático (`lib/aeMapping.json`), generado a mano a partir del Google Sheet "AEs Meeting links" (pestaña "Output"). No se actualiza solo — el dashboard muestra la fecha de carga junto al filtro para dejarlo claro.
+
+Para actualizarlo cuando cambien asignaciones de AE:
+
+1. Abrí la pestaña "Output" del sheet.
+2. Archivo > Descargar > Valores separados por comas (.csv).
+3. Pasale el archivo a quien mantenga el dashboard (por ahora, Claude) para que regenere `lib/aeMapping.json` y actualice la fecha en `AE_DATA_DATE` (`components/Dashboard.jsx`).
+4. Commit y push de los cambios.
+
+Si en algún momento se consigue acceso de Editor a ese Sheet (o a un proyecto de Google Cloud), se puede migrar a lectura en vivo con una Service Account, igual que el registro de descargas.
+
+## 6. Seguridad
 
 Si en algún momento vas a compartir el repo o el link ampliamente, considerá regenerar el API key en Redash y actualizar la variable de entorno en Vercel.
 

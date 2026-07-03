@@ -265,9 +265,12 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
 
   const t = DICT[lang];
 
+  // Las opciones de instancia se acotan al AE elegido (si hay uno elegido),
+  // así el dropdown de instancia solo muestra las instancias de ese AE.
   const instances = useMemo(() => {
+    const source = aeFilter === "all" ? rows : rows.filter((r) => r.aeName === aeFilter);
     const map = new Map();
-    rows.forEach((r) => {
+    source.forEach((r) => {
       if (r.instanceId == null) return;
       if (!map.has(r.instanceId) || (!map.get(r.instanceId) && r.instanceName)) {
         map.set(r.instanceId, r.instanceName || null);
@@ -280,7 +283,36 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
         label: `${name || t.instanceFallback} (${id})`,
       }))
       .sort((a, b) => a.id - b.id);
-  }, [rows, t.instanceFallback]);
+  }, [rows, aeFilter, t.instanceFallback]);
+
+  // Instancia -> AE (una instancia tiene un único AE asignado) — se usa para
+  // auto-seleccionar el AE correspondiente cuando se elige una instancia.
+  const aeByInstance = useMemo(() => {
+    const map = new Map();
+    rows.forEach((r) => {
+      if (r.instanceId != null && r.aeName && !map.has(String(r.instanceId))) {
+        map.set(String(r.instanceId), r.aeName);
+      }
+    });
+    return map;
+  }, [rows]);
+
+  function handleInstanceFilterChange(newInstanceId) {
+    setInstanceFilter(newInstanceId);
+    if (newInstanceId === "all") return;
+    const correspondingAe = aeByInstance.get(String(newInstanceId));
+    setAeFilter(correspondingAe || "all");
+  }
+
+  function handleAeFilterChange(newAe) {
+    setAeFilter(newAe);
+    if (newAe === "all") return;
+    // Si la instancia elegida no pertenece a este AE, se limpia para no dejar
+    // una combinación de filtros imposible (0 resultados sin que se entienda por qué).
+    if (instanceFilter !== "all" && aeByInstance.get(String(instanceFilter)) !== newAe) {
+      setInstanceFilter("all");
+    }
+  }
 
   const instanceFilteredRows = useMemo(() => {
     if (instanceFilter === "all") return rows;
@@ -625,7 +657,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
           instances={instances}
           value={instanceFilter}
           label={selectedInstanceLabel}
-          onChange={setInstanceFilter}
+          onChange={handleInstanceFilterChange}
           t={t}
         />
         {instanceFilter !== "all" && (
@@ -663,7 +695,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
           instances={aeOptions}
           value={aeFilter}
           label={selectedAeLabel}
-          onChange={setAeFilter}
+          onChange={handleAeFilterChange}
           t={{ ...t, allInstances: t.allAes, searchInstance: t.searchAe }}
         />
         {aeFilter !== "all" && (

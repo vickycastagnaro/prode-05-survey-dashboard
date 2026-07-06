@@ -110,6 +110,7 @@ const DICT = {
     colDate: "Fecha",
     colInstance: "Instancia",
     colAe: "AE",
+    colCountry: "País",
     colIntent: "Intención",
     colLang: "Idioma",
     filterByAe: "Filtrar por AE:",
@@ -117,7 +118,11 @@ const DICT = {
     searchAe: "Buscar AE...",
     aeUnassigned: "Sin asignar",
     aeLabel: "AE",
-    aeDataNote: (date) => `Datos de AE cargados manualmente al ${date} (no se actualizan solos)`,
+    filterByCountry: "Filtrar por país:",
+    allCountries: "Todos los países",
+    searchCountry: "Buscar país...",
+    countryLabel: "país",
+    staticDataNote: (date) => `Datos de AE y país cargados manualmente al ${date} (no se actualizan solos)`,
   },
   en: {
     title: "PRODE 05: Satisfaction Survey",
@@ -195,6 +200,7 @@ const DICT = {
     colDate: "Date",
     colInstance: "Instance",
     colAe: "AE",
+    colCountry: "Country",
     colIntent: "Intent",
     colLang: "Language",
     filterByAe: "Filter by AE:",
@@ -202,7 +208,11 @@ const DICT = {
     searchAe: "Search AE...",
     aeUnassigned: "Unassigned",
     aeLabel: "AE",
-    aeDataNote: (date) => `AE data manually loaded on ${date} (does not auto-update)`,
+    filterByCountry: "Filter by country:",
+    allCountries: "All countries",
+    searchCountry: "Search country...",
+    countryLabel: "country",
+    staticDataNote: (date) => `AE and country data manually loaded on ${date} (does not auto-update)`,
   },
 };
 
@@ -251,6 +261,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
   const [redashUpdatedAt, setRedashUpdatedAt] = useState(initialRetrievedAt || null);
   const [instanceFilter, setInstanceFilter] = useState("all");
   const [aeFilter, setAeFilter] = useState("all");
+  const [countryFilter, setCountryFilter] = useState("all");
   const [intentFilter, setIntentFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -265,10 +276,37 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
 
   const t = DICT[lang];
 
-  // Las opciones de instancia se acotan al AE elegido (si hay uno elegido),
-  // así el dropdown de instancia solo muestra las instancias de ese AE.
+  // Instancia -> AE / país (una instancia tiene un único AE y un único país
+  // asignados) — se usan para auto-seleccionar el AE y el país correspondiente
+  // cuando se elige una instancia, y para saber si una instancia sigue siendo
+  // válida cuando cambian los otros filtros.
+  const aeByInstance = useMemo(() => {
+    const map = new Map();
+    rows.forEach((r) => {
+      if (r.instanceId != null && r.aeName && !map.has(String(r.instanceId))) {
+        map.set(String(r.instanceId), r.aeName);
+      }
+    });
+    return map;
+  }, [rows]);
+
+  const countryByInstance = useMemo(() => {
+    const map = new Map();
+    rows.forEach((r) => {
+      if (r.instanceId != null && r.countryName && !map.has(String(r.instanceId))) {
+        map.set(String(r.instanceId), r.countryName);
+      }
+    });
+    return map;
+  }, [rows]);
+
+  // Las opciones de instancia se acotan al AE y/o país elegidos.
   const instances = useMemo(() => {
-    const source = aeFilter === "all" ? rows : rows.filter((r) => r.aeName === aeFilter);
+    const source = rows.filter(
+      (r) =>
+        (aeFilter === "all" || r.aeName === aeFilter) &&
+        (countryFilter === "all" || r.countryName === countryFilter)
+    );
     const map = new Map();
     source.forEach((r) => {
       if (r.instanceId == null) return;
@@ -283,35 +321,85 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
         label: `${name || t.instanceFallback} (${id})`,
       }))
       .sort((a, b) => a.id - b.id);
-  }, [rows, aeFilter, t.instanceFallback]);
+  }, [rows, aeFilter, countryFilter, t.instanceFallback]);
 
-  // Instancia -> AE (una instancia tiene un único AE asignado) — se usa para
-  // auto-seleccionar el AE correspondiente cuando se elige una instancia.
-  const aeByInstance = useMemo(() => {
-    const map = new Map();
-    rows.forEach((r) => {
-      if (r.instanceId != null && r.aeName && !map.has(String(r.instanceId))) {
-        map.set(String(r.instanceId), r.aeName);
-      }
+  // Las opciones de AE se acotan al país elegido.
+  const aeOptions = useMemo(() => {
+    const source = countryFilter === "all" ? rows : rows.filter((r) => r.countryName === countryFilter);
+    const set = new Set();
+    source.forEach((r) => {
+      if (r.aeName) set.add(r.aeName);
     });
-    return map;
-  }, [rows]);
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ id: name, name, label: name }));
+  }, [rows, countryFilter]);
 
-  function handleInstanceFilterChange(newInstanceId) {
-    setInstanceFilter(newInstanceId);
-    if (newInstanceId === "all") return;
-    const correspondingAe = aeByInstance.get(String(newInstanceId));
-    setAeFilter(correspondingAe || "all");
+  // Las opciones de país se acotan al AE elegido.
+  const countryOptions = useMemo(() => {
+    const source = aeFilter === "all" ? rows : rows.filter((r) => r.aeName === aeFilter);
+    const set = new Set();
+    source.forEach((r) => {
+      if (r.countryName) set.add(r.countryName);
+    });
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ id: name, name, label: name }));
+  }, [rows, aeFilter]);
+
+  // Cambiar cualquiera de los tres filtros (instancia / AE / país) mantiene a
+  // los otros dos consistentes entre sí:
+  // - Elegir una instancia autoselecciona el AE y el país que le corresponden.
+  // - Elegir un AE o un país limpia la instancia si ya no encaja, y limpia el
+  //   otro filtro (AE/país) si la combinación deja de tener sentido.
+  function applyFilterChange(dimension, value) {
+    let nextInstance = instanceFilter;
+    let nextAe = aeFilter;
+    let nextCountry = countryFilter;
+
+    if (dimension === "instance") {
+      nextInstance = value;
+      if (value !== "all") {
+        nextAe = aeByInstance.get(String(value)) || "all";
+        nextCountry = countryByInstance.get(String(value)) || "all";
+      }
+    } else if (dimension === "ae") {
+      nextAe = value;
+    } else if (dimension === "country") {
+      nextCountry = value;
+    }
+
+    if (dimension !== "instance" && nextInstance !== "all") {
+      const row = rows.find((r) => String(r.instanceId) === String(nextInstance));
+      const okAe = nextAe === "all" || (row && row.aeName === nextAe);
+      const okCountry = nextCountry === "all" || (row && row.countryName === nextCountry);
+      if (!okAe || !okCountry) nextInstance = "all";
+    }
+
+    if (dimension === "ae" && nextCountry !== "all") {
+      const stillValid = rows.some((r) => r.aeName === nextAe && r.countryName === nextCountry);
+      if (!stillValid) nextCountry = "all";
+    }
+    if (dimension === "country" && nextAe !== "all") {
+      const stillValid = rows.some((r) => r.aeName === nextAe && r.countryName === nextCountry);
+      if (!stillValid) nextAe = "all";
+    }
+
+    setInstanceFilter(nextInstance);
+    setAeFilter(nextAe);
+    setCountryFilter(nextCountry);
   }
 
-  function handleAeFilterChange(newAe) {
-    setAeFilter(newAe);
-    if (newAe === "all") return;
-    // Si la instancia elegida no pertenece a este AE, se limpia para no dejar
-    // una combinación de filtros imposible (0 resultados sin que se entienda por qué).
-    if (instanceFilter !== "all" && aeByInstance.get(String(instanceFilter)) !== newAe) {
-      setInstanceFilter("all");
-    }
+  function handleInstanceFilterChange(value) {
+    applyFilterChange("instance", value);
+  }
+
+  function handleAeFilterChange(value) {
+    applyFilterChange("ae", value);
+  }
+
+  function handleCountryFilterChange(value) {
+    applyFilterChange("country", value);
   }
 
   const instanceFilteredRows = useMemo(() => {
@@ -319,39 +407,34 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
     return rows.filter((r) => String(r.instanceId) === String(instanceFilter));
   }, [rows, instanceFilter]);
 
-  const aeOptions = useMemo(() => {
-    const set = new Set();
-    rows.forEach((r) => {
-      if (r.aeName) set.add(r.aeName);
-    });
-    return Array.from(set)
-      .sort((a, b) => a.localeCompare(b))
-      .map((name) => ({ id: name, name, label: name }));
-  }, [rows]);
-
   const aeFilteredRows = useMemo(() => {
     if (aeFilter === "all") return instanceFilteredRows;
     return instanceFilteredRows.filter((r) => r.aeName === aeFilter);
   }, [instanceFilteredRows, aeFilter]);
 
-  // Conteo por intención dentro del alcance de instancia + AE (sin aplicar el
-  // propio filtro de intención) — se usa solo para los números en los pills de
-  // filtro, así siempre muestran cuántas respuestas hay disponibles para cada
-  // opción.
+  const countryFilteredRows = useMemo(() => {
+    if (countryFilter === "all") return aeFilteredRows;
+    return aeFilteredRows.filter((r) => r.countryName === countryFilter);
+  }, [aeFilteredRows, countryFilter]);
+
+  // Conteo por intención dentro del alcance de instancia + AE + país (sin
+  // aplicar el propio filtro de intención) — se usa solo para los números en
+  // los pills de filtro, así siempre muestran cuántas respuestas hay
+  // disponibles para cada opción.
   const pillIntentCounts = { yes: 0, maybe: 0, no: 0 };
-  aeFilteredRows.forEach((r) => {
+  countryFilteredRows.forEach((r) => {
     if (r.q2_continuity_intent && pillIntentCounts[r.q2_continuity_intent] != null) {
       pillIntentCounts[r.q2_continuity_intent] += 1;
     }
   });
 
-  // Filtro global: instancia + AE + intención (Sí/Tal vez/No). Afecta KPIs,
-  // gráfico, temas y la lista de respuestas individuales — no solo la última
-  // sección.
+  // Filtro global: instancia + AE + país + intención (Sí/Tal vez/No). Afecta
+  // KPIs, gráfico, temas y la lista de respuestas individuales — no solo la
+  // última sección.
   const scopedRows = useMemo(() => {
-    if (intentFilter === "all") return aeFilteredRows;
-    return aeFilteredRows.filter((r) => r.q2_continuity_intent === intentFilter);
-  }, [aeFilteredRows, intentFilter]);
+    if (intentFilter === "all") return countryFilteredRows;
+    return countryFilteredRows.filter((r) => r.q2_continuity_intent === intentFilter);
+  }, [countryFilteredRows, intentFilter]);
 
   const total = scopedRows.length;
   const avgRating = total
@@ -416,6 +499,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
       : instances.find((i) => String(i.id) === String(instanceFilter))?.name || t.instanceFallback;
 
   const selectedAeLabel = aeFilter === "all" ? t.allAes : aeFilter;
+  const selectedCountryLabel = countryFilter === "all" ? t.allCountries : countryFilter;
 
   async function handleRefresh() {
     setLoading(true);
@@ -528,6 +612,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
           email: downloaderEmail.trim(),
           instanceLabel: selectedInstanceLabel,
           aeLabel: selectedAeLabel,
+          countryLabel: selectedCountryLabel,
           intentLabel: intentLabelForLog,
           lang,
         }),
@@ -542,9 +627,14 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
   }
 
   const filtersAppliedText =
-    instanceFilter !== "all" || aeFilter !== "all" || intentFilter !== "all" || search.trim() !== ""
+    instanceFilter !== "all" ||
+    aeFilter !== "all" ||
+    countryFilter !== "all" ||
+    intentFilter !== "all" ||
+    search.trim() !== ""
       ? `${t.filtersApplied}: ${t.instanceLabel} — ${selectedInstanceLabel}` +
         (aeFilter !== "all" ? ` · ${t.aeLabel} — ${selectedAeLabel}` : "") +
+        (countryFilter !== "all" ? ` · ${t.countryLabel} — ${selectedCountryLabel}` : "") +
         (intentFilter !== "all" ? ` · ${t.intentLabel} — ${t.intents[intentFilter]}` : "") +
         (search.trim() !== "" ? ` · ${t.searchLabel} — "${search.trim()}"` : "")
       : null;
@@ -714,8 +804,46 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
             {t.clearFilter}
           </button>
         )}
+      </div>
+
+      <div
+        className="no-print"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-lighter)" }}>
+          {t.filterByCountry}
+        </span>
+        <InstanceDropdown
+          instances={countryOptions}
+          value={countryFilter}
+          label={selectedCountryLabel}
+          onChange={handleCountryFilterChange}
+          t={{ ...t, allInstances: t.allCountries, searchInstance: t.searchCountry }}
+        />
+        {countryFilter !== "all" && (
+          <button
+            onClick={() => setCountryFilter("all")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--brand-600)",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            {t.clearFilter}
+          </button>
+        )}
         <span className="no-print" style={{ fontSize: 12, color: "var(--text-lighter)" }}>
-          {t.aeDataNote(AE_DATA_DATE)}
+          {t.staticDataNote(AE_DATA_DATE)}
         </span>
       </div>
 
@@ -727,7 +855,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
           {t.filterByIntent}
         </span>
         <FilterPill
-          label={`${t.filterAllLabel} (${aeFilteredRows.length})`}
+          label={`${t.filterAllLabel} (${countryFilteredRows.length})`}
           active={intentFilter === "all"}
           onClick={() => setIntentFilter("all")}
         />
@@ -1519,7 +1647,7 @@ function DownloadLogTable({ log, loading, t }) {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
         <thead>
           <tr>
-            {[t.colName, t.colEmail, t.colDate, t.colInstance, t.colAe, t.colIntent, t.colLang].map((h) => (
+            {[t.colName, t.colEmail, t.colDate, t.colInstance, t.colAe, t.colCountry, t.colIntent, t.colLang].map((h) => (
               <th
                 key={h}
                 style={{
@@ -1546,6 +1674,7 @@ function DownloadLogTable({ log, loading, t }) {
               </td>
               <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.instance || "-"}</td>
               <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.ae || "-"}</td>
+              <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.country || "-"}</td>
               <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>{entry.intent || "-"}</td>
               <td style={{ padding: "8px 12px", borderBottom: "1px solid var(--neutral-100)" }}>
                 {(entry.lang || "-").toUpperCase()}

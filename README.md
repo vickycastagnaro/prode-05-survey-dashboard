@@ -42,7 +42,7 @@ Pasos para activarlo:
 2. Habilitá la **Google Sheets API** para ese proyecto (buscala en "APIs & Services" > "Library").
 3. Creá una **Service Account** ("APIs & Services" > "Credentials" > "Create Credentials" > "Service Account"). No hace falta darle ningún rol especial a nivel proyecto.
 4. Entrá a la Service Account creada, pestaña "Keys" > "Add Key" > "Create new key" > tipo **JSON**. Se descarga un archivo `.json` — ahí adentro están `client_email` y `private_key`.
-5. Creá un Google Sheet nuevo (o usá uno existente). Renombrá una hoja (tab) a `Descargas` y en la fila 1 poné los encabezados: `Nombre | Email | Fecha | Instancia | Intención | Idioma`.
+5. Creá un Google Sheet nuevo (o usá uno existente). Renombrá una hoja (tab) a `Descargas` y en la fila 1 poné los encabezados: `Nombre | Email | Fecha | Instancia | AE | País | Intención | Idioma`.
 6. Compartí ese Google Sheet con el email de la Service Account (el `client_email` del paso 4), con permiso de **Editor**.
 7. Copiá el ID del Sheet (la parte de la URL entre `/d/` y `/edit`).
 8. En Vercel, agregá estas variables de entorno (Project Settings > Environment Variables):
@@ -53,18 +53,23 @@ Pasos para activarlo:
 
 Si estas variables no están configuradas, el resto del dashboard sigue funcionando normal — el historial simplemente aparece vacío y la descarga de PDF no se ve afectada.
 
-## 5. Mapeo de AE por instancia
+## 5. Mapeo de AE y país por instancia
 
-El filtro "AE" del dashboard usa un archivo estático (`lib/aeMapping.json`), generado a mano a partir del Google Sheet "AEs Meeting links" (pestaña "Output"). No se actualiza solo — el dashboard muestra la fecha de carga junto al filtro para dejarlo claro.
+Los filtros "AE" y "País" del dashboard usan archivos estáticos (`lib/aeMapping.json` y `lib/countryMapping.json`), generados a mano a partir de dos Google Sheets:
 
-Para actualizarlo cuando cambien asignaciones de AE:
+- AE: "AEs Meeting links", pestaña "Output".
+- País: "PRODE - Pipeline - Analysis", pestaña "FREE TRIAL DEALS", columna "Main Country".
 
-1. Abrí la pestaña "Output" del sheet.
+Ninguno de los dos se actualiza solo — el dashboard muestra la fecha de carga junto a los filtros para dejarlo claro. Ambos filtros están cruzados entre sí y con el de instancia: elegir uno acota las opciones de los otros dos, y elegir una instancia autoselecciona su AE y su país.
+
+Para actualizarlos cuando cambien los datos de origen:
+
+1. Abrí la pestaña correspondiente del sheet.
 2. Archivo > Descargar > Valores separados por comas (.csv).
-3. Pasale el archivo a quien mantenga el dashboard (por ahora, Claude) para que regenere `lib/aeMapping.json` y actualice la fecha en `AE_DATA_DATE` (`components/Dashboard.jsx`).
+3. Pasale el archivo a quien mantenga el dashboard (por ahora, Claude) para que regenere `lib/aeMapping.json` y/o `lib/countryMapping.json`, y actualice la fecha en `AE_DATA_DATE` (`components/Dashboard.jsx`).
 4. Commit y push de los cambios.
 
-Si en algún momento se consigue acceso de Editor a ese Sheet (o a un proyecto de Google Cloud), se puede migrar a lectura en vivo con una Service Account, igual que el registro de descargas.
+Si en algún momento se consigue acceso de Editor a esos Sheets (o a un proyecto de Google Cloud), se puede migrar a lectura en vivo con una Service Account, igual que el registro de descargas.
 
 ## 6. Seguridad
 

@@ -79,6 +79,7 @@ const DICT = {
     filterAllLabel: "Todos",
     searchComments: "Buscar en comentarios...",
     shownCount: (n) => `${n} mostrados`,
+    hideEmptyComments: "Ocultar sin comentario",
     noResponsesFilter: "No hay respuestas para este filtro.",
     q3Label: "Q3 — Comentario",
     ratingWord: "Rating",
@@ -169,6 +170,7 @@ const DICT = {
     filterAllLabel: "All",
     searchComments: "Search comments...",
     shownCount: (n) => `${n} shown`,
+    hideEmptyComments: "Hide without comment",
     noResponsesFilter: "No responses match this filter.",
     q3Label: "Q3 — Comment",
     ratingWord: "Rating",
@@ -264,6 +266,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
   const [countryFilter, setCountryFilter] = useState("all");
   const [intentFilter, setIntentFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [hideEmptyComments, setHideEmptyComments] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [lang, setLang] = useState("es");
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -468,12 +471,15 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
 
   const listRows = useMemo(() => {
     let list = scopedRows;
+    if (hideEmptyComments) {
+      list = list.filter((r) => (r.q3_comment || "").trim() !== "");
+    }
     if (search.trim() !== "") {
       const q = search.trim().toLowerCase();
       list = list.filter((r) => (r.q3_comment || "").toLowerCase().includes(q));
     }
     return [...list].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-  }, [scopedRows, search]);
+  }, [scopedRows, search, hideEmptyComments]);
 
   const themeGroups = useMemo(() => {
     const map = new Map();
@@ -997,6 +1003,25 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
               fontSize: 14,
             }}
           />
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 14,
+              color: "var(--text-default)",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={hideEmptyComments}
+              onChange={(e) => setHideEmptyComments(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            {t.hideEmptyComments}
+          </label>
           <span style={{ fontSize: 12, color: "var(--text-lighter)", alignSelf: "center" }}>
             {t.shownCount(listRows.length)}
           </span>

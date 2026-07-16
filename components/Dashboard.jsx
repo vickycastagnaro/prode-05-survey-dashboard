@@ -123,7 +123,8 @@ const DICT = {
     allCountries: "Todos los países",
     searchCountry: "Buscar país...",
     countryLabel: "país",
-    staticDataNote: (date) => `Datos de AE y país cargados manualmente al ${date} (no se actualizan solos)`,
+    staticDataNote: (aeDate, countryDate) =>
+      `Datos cargados manualmente (no se actualizan solos): AE al ${aeDate} · País al ${countryDate}`,
   },
   en: {
     title: "PRODE 05: Satisfaction Survey",
@@ -214,11 +215,13 @@ const DICT = {
     allCountries: "All countries",
     searchCountry: "Search country...",
     countryLabel: "country",
-    staticDataNote: (date) => `AE and country data manually loaded on ${date} (does not auto-update)`,
+    staticDataNote: (aeDate, countryDate) =>
+      `Manually loaded data (does not auto-update): AE as of ${aeDate} · Country as of ${countryDate}`,
   },
 };
 
-const AE_DATA_DATE = "03/07/2026";
+const AE_DATA_DATE = "16/07/2026";
+const COUNTRY_DATA_DATE = "03/07/2026";
 
 function formatDate(iso, locale) {
   if (!iso) return "-";
@@ -849,7 +852,7 @@ export default function Dashboard({ initialRows, initialError, initialRetrievedA
           </button>
         )}
         <span className="no-print" style={{ fontSize: 12, color: "var(--text-lighter)" }}>
-          {t.staticDataNote(AE_DATA_DATE)}
+          {t.staticDataNote(AE_DATA_DATE, COUNTRY_DATA_DATE)}
         </span>
       </div>
 

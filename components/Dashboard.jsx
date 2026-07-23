@@ -220,7 +220,7 @@ const DICT = {
   },
 };
 
-const AE_DATA_DATE = "16/07/2026";
+const AE_DATA_DATE = "23/07/2026";
 const COUNTRY_DATA_DATE = "03/07/2026";
 
 function formatDate(iso, locale) {
